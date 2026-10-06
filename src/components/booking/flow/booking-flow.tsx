@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { m, EASE } from "@/components/ui/motion";
 import type { Departure } from "@/lib/utils/departures";
 import { quotePrice, type PaymentPlan } from "@/lib/utils/pricing";
 import { formatPrice } from "@/lib/utils/format";
-import { WhatsappIcon } from "@/components/brand/social-icons";
+import { emptyCompanion, validateDetails, type DetailErrors } from "@/lib/utils/booking-details";
+import { createBookingAction } from "@/app/(checkout)/book/[slug]/actions";
 import { DateSelector } from "../date-selector";
 import { ParticipantSelector } from "../participant-selector";
 import { PriceOptionSelector } from "../price-option-selector";
 import { Stepper } from "./stepper";
 import { OrderSummaryCard } from "./order-summary-card";
-import { TravellerStep, validateDetails, type DetailErrors } from "./traveller-step";
-import { ReviewStep, bookingWhatsappLink } from "./review-step";
+import { TravellerStep } from "./traveller-step";
+import { ConfirmButton, ReviewStep } from "./review-step";
 import { emptyDetails, STEPS, type CheckoutPackage, type TravellerDetails } from "./types";
 
 interface BookingFlowProps {
@@ -24,15 +26,20 @@ interface BookingFlowProps {
   initialDate: string | null;
   initialParticipants: number;
   initialOptionId: number;
+  /** Generated per page load so a resubmitted request can't create a second booking. */
+  idempotencyKey: string;
 }
 
 const stepTitles = [
   { title: "Choose your departure", sub: "Pick a date and tell us how many are coming." },
   { title: "Who's travelling?", sub: "A few details so your trek leader knows who to expect." },
-  { title: "Review your trip", sub: "Check everything looks right, then send it to our team." },
+  { title: "Review your trip", sub: "Check everything looks right, then confirm your booking." },
 ];
 
-export function BookingFlow({ pkg, departures, initialDate, initialParticipants, initialOptionId }: BookingFlowProps) {
+export function BookingFlow({ pkg, departures, initialDate, initialParticipants, initialOptionId, idempotencyKey }: BookingFlowProps) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState(initialDate ? 1 : 0);
   const [date, setDate] = useState<string | null>(initialDate);
   const [participants, setParticipants] = useState(initialParticipants);
@@ -53,6 +60,13 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
       : full;
   }, [pkg.pricing, optionId, participants, plan]);
 
+  // Companion entries beyond the current traveller count are kept in state (in case the
+  // count goes back up) but never validated or submitted.
+  const travellers = useMemo<TravellerDetails>(
+    () => ({ ...details, companions: Array.from({ length: participants - 1 }, (_, i) => details.companions[i] ?? emptyCompanion) }),
+    [details, participants],
+  );
+
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -67,14 +81,42 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
       if (!date) return setDateError(true);
       setStep(1);
     } else if (step === 1) {
-      const e = validateDetails(details);
+      const e = validateDetails(travellers);
       setErrors(e);
       if (Object.keys(e).length) {
         document.querySelector<HTMLInputElement>("[aria-invalid='true']")?.focus();
         return;
       }
+      setSubmitError(null);
       setStep(2);
     }
+  };
+
+  const confirm = () => {
+    if (!date || pending) return;
+    setSubmitError(null);
+    startTransition(async () => {
+      const result = await createBookingAction({
+        slug: pkg.slug,
+        departureDate: date,
+        optionId: quote.option.id ?? null,
+        plan: quote.plan,
+        expectedTotal: quote.total,
+        expectedPayNow: quote.payNow,
+        idempotencyKey,
+        details: travellers,
+      });
+      if (result.ok) {
+        router.push(result.path);
+        return;
+      }
+      if (result.fieldErrors) {
+        setErrors(result.fieldErrors);
+        setStep(1);
+        return;
+      }
+      setSubmitError(result.error);
+    });
   };
 
   return (
@@ -144,18 +186,28 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
                     details={details}
                     participants={participants}
                     errors={errors}
-                    onChange={(patch) => {
+                    onChange={(patch, changedKeys) => {
                       setDetails((d) => ({ ...d, ...patch }));
                       setErrors((e) => {
                         const copy = { ...e };
-                        for (const k of Object.keys(patch)) delete copy[k as keyof TravellerDetails];
+                        for (const k of changedKeys) delete copy[k];
                         return copy;
                       });
                     }}
                   />
                 )}
                 {step === 2 && date && (
-                  <ReviewStep pkg={pkg} date={date} details={details} quote={quote} onPlanChange={setPlan} onEdit={setStep} />
+                  <ReviewStep
+                    pkg={pkg}
+                    date={date}
+                    details={travellers}
+                    quote={quote}
+                    onPlanChange={setPlan}
+                    onEdit={setStep}
+                    onConfirm={confirm}
+                    pending={pending}
+                    error={submitError}
+                  />
                 )}
               </m.div>
             </AnimatePresence>
@@ -191,14 +243,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
             <p className="font-display text-xl font-semibold text-ink">{formatPrice(quote.payNow)}</p>
           </div>
           {step === 2 && date ? (
-            <a
-              href={bookingWhatsappLink(pkg, date, details, quote)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-[#25D366] px-6 text-sm font-semibold text-white"
-            >
-              <WhatsappIcon className="size-4" /> Send on WhatsApp
-            </a>
+            <ConfirmButton onClick={confirm} pending={pending} className="h-12 shrink-0 px-6 text-sm" />
           ) : (
             <button
               type="button"

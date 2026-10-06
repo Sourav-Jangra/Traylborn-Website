@@ -1,8 +1,6 @@
 "use client";
 
-import { Info, Pencil } from "lucide-react";
-import { WhatsappIcon } from "@/components/brand/social-icons";
-import { whatsappLink } from "@/lib/config/site";
+import { Info, Loader2, Pencil } from "lucide-react";
 import type { PaymentPlan, PriceQuote } from "@/lib/utils/pricing";
 import { addDays, formatDateLong, formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
@@ -15,32 +13,30 @@ interface ReviewStepProps {
   quote: PriceQuote;
   onPlanChange: (plan: PaymentPlan) => void;
   onEdit: (step: number) => void;
+  onConfirm: () => void;
+  pending: boolean;
+  error: string | null;
 }
 
-/** WhatsApp message carrying the reviewed trip and traveller details to the Traylborn team. */
-export function bookingWhatsappLink(pkg: CheckoutPackage, date: string, details: TravellerDetails, quote: PriceQuote) {
-  const companions = details.companions.map((c) => c.trim()).filter(Boolean);
-  const lines = [
-    `Hi Traylborn! I'd like to book ${pkg.title}.`,
-    `Departure: ${formatDateLong(date)}`,
-    pkg.pricing.priceOptions.length > 1 ? `Option: ${quote.option.label}` : "",
-    `Travellers: ${quote.travellers} (${formatPrice(quote.option.price)} per person, total ${formatPrice(quote.total)})`,
-    quote.advance === null
-      ? ""
-      : quote.plan === "advance"
-        ? `Payment: advance of ${formatPrice(quote.payNow)} now, balance ${formatPrice(quote.balance)} later`
-        : `Payment: full amount (${formatPrice(quote.total)})`,
-    `Lead traveller: ${details.name.trim()}, ${details.phone.trim()}, ${details.email.trim()}, ${details.city.trim()}`,
-    companions.length ? `Other travellers: ${companions.join(", ")}` : "",
-    details.emergencyName.trim() || details.emergencyPhone.trim()
-      ? `Emergency contact: ${[details.emergencyName.trim(), details.emergencyPhone.trim()].filter(Boolean).join(", ")}`
-      : "",
-    details.notes.trim() ? `Notes: ${details.notes.trim()}` : "",
-  ];
-  return whatsappLink(lines.filter(Boolean).join("\n"));
+export function ConfirmButton({ onClick, pending, className }: { onClick: () => void; pending: boolean; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      aria-busy={pending}
+      className={cn(
+        "inline-flex items-center justify-center gap-2 rounded-full bg-ember-500 font-semibold text-ink transition-colors hover:bg-ember-400 disabled:cursor-wait disabled:opacity-70",
+        className,
+      )}
+    >
+      {pending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+      {pending ? "Confirming…" : "Confirm booking"}
+    </button>
+  );
 }
 
-export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit }: ReviewStepProps) {
+export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit, onConfirm, pending, error }: ReviewStepProps) {
   const showOption = pkg.pricing.priceOptions.length > 1;
   return (
     <div className="space-y-6">
@@ -55,12 +51,17 @@ export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit }: 
         </p>
       </ReviewBlock>
 
-      <ReviewBlock title="Lead traveller" onEdit={() => onEdit(1)}>
-        <p className="font-semibold text-ink">{details.name}</p>
-        <p className="text-muted-foreground">{details.email} · {details.phone}</p>
-        <p className="text-muted-foreground">{details.city}</p>
-        {details.companions.filter(Boolean).length > 0 && (
-          <p className="mt-1 text-muted-foreground">With {details.companions.filter(Boolean).join(", ")}</p>
+      <ReviewBlock title="Travellers" onEdit={() => onEdit(1)}>
+        <p className="font-semibold text-ink">{details.name.trim()}, {details.age.trim()}</p>
+        <p className="text-muted-foreground">{details.email.trim()} · {details.phone.trim()}</p>
+        <p className="text-muted-foreground">{details.city.trim()}</p>
+        <p className="text-muted-foreground">Emergency contact: {details.emergencyName.trim()}, {details.emergencyPhone.trim()}</p>
+        {details.companions.length > 0 && (
+          <ul className="mt-2 space-y-0.5 border-t border-border pt-2 text-muted-foreground">
+            {details.companions.map((c, i) => (
+              <li key={i}>{c.name.trim()}, {c.age.trim()}</li>
+            ))}
+          </ul>
         )}
       </ReviewBlock>
 
@@ -96,20 +97,18 @@ export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit }: 
 
       <div className="rounded-2xl bg-pine-50 p-5 text-sm ring-1 ring-pine-200">
         <p className="flex items-center gap-2 font-semibold text-pine-800">
-          <Info className="size-4 shrink-0" aria-hidden="true" /> Online booking isn&apos;t available yet
+          <Info className="size-4 shrink-0" aria-hidden="true" /> Nothing is charged now
         </p>
         <p className="mt-1.5 text-pine-800/80">
-          Nothing has been booked or paid. Send these details to our team on WhatsApp and we&apos;ll confirm your
-          departure and how to pay.
+          Confirming creates your booking with a reference number, awaiting payment. Online payment isn&apos;t
+          available yet, so our team will contact you to arrange it.
         </p>
-        <a
-          href={bookingWhatsappLink(pkg, date, details, quote)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-flex h-12 items-center gap-2 rounded-full bg-[#25D366] px-6 font-semibold text-white transition-colors hover:bg-[#1fbb59]"
-        >
-          <WhatsappIcon className="size-4" /> Send details on WhatsApp
-        </a>
+        {error && (
+          <p role="alert" className="mt-4 rounded-xl bg-destructive/8 px-4 py-3 font-medium text-destructive">
+            {error}
+          </p>
+        )}
+        <ConfirmButton onClick={onConfirm} pending={pending} className="mt-4 hidden h-12 px-8 lg:inline-flex" />
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPackageBySlug } from "@/server/packages";
@@ -46,6 +47,7 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
       initialDate={initialDate}
       initialParticipants={initialParticipants}
       initialOptionId={initialOptionId}
+      idempotencyKey={randomUUID()}
     />
   );
 }

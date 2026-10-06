@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ExternalLink, LayoutDashboard, LogOut, Menu, Package } from "lucide-react";
+import { ExternalLink, LayoutDashboard, LogOut, Menu, Package, Ticket } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ type SignedInAdmin = { name: string; email: string };
 export const adminNav = [
   { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
   { label: "Packages", href: "/admin/packages", Icon: Package },
+  { label: "Bookings", href: "/admin/bookings", Icon: Ticket },
 ];
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {

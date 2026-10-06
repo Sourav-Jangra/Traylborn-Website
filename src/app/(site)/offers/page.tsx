@@ -5,7 +5,7 @@ import { PackageCard } from "@/components/packages/package-card";
 import { SectionHeading, Accent } from "@/components/layout/section-heading";
 import { WhatsappIcon } from "@/components/brand/social-icons";
 import { getPublishedPackages } from "@/server/packages";
-import { whatsappLink } from "@/lib/mock-data/site";
+import { whatsappLink } from "@/lib/config/site";
 
 export const metadata: Metadata = {
   title: "Offers",

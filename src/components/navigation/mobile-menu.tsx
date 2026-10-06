@@ -9,8 +9,8 @@ import { ArrowUpRight, Phone, X } from "lucide-react";
 import { m, EASE } from "@/components/ui/motion";
 import { LogoMark } from "@/components/brand/logo";
 import { WhatsappIcon } from "@/components/brand/social-icons";
-import { categories } from "@/lib/mock-data/categories";
-import { siteConfig, whatsappLink } from "@/lib/mock-data/site";
+import { categories } from "@/lib/config/categories";
+import { siteConfig, whatsappLink } from "@/lib/config/site";
 
 const secondary = [
   { label: "Offers", href: "/offers" },

@@ -1,5 +1,6 @@
 import type { Difficulty, TravelPackage } from "@/lib/types";
 import { getDepartures, getNextDeparture } from "./departures";
+import { upcomingCalendarMonths } from "./format";
 import { searchPackages } from "./search";
 
 export interface PackageFilters {
@@ -9,7 +10,7 @@ export interface PackageFilters {
   price: "" | "under-7k" | "7k-15k" | "over-15k";
   difficulty: Difficulty[];
   month: string;
-  sort: "recommended" | "price-asc" | "price-desc" | "rating" | "departure" | "duration";
+  sort: "recommended" | "price-asc" | "price-desc" | "departure" | "duration";
 }
 
 export const defaultFilters: PackageFilters = {
@@ -39,7 +40,6 @@ export const sortOptions = [
   { value: "departure", label: "Next departure" },
   { value: "price-asc", label: "Price: low to high" },
   { value: "price-desc", label: "Price: high to low" },
-  { value: "rating", label: "Top rated" },
   { value: "duration", label: "Shortest first" },
 ] as const;
 
@@ -75,14 +75,12 @@ export function applyFilters(packages: TravelPackage[], f: PackageFilters) {
       return list.sort((a, b) => a.price - b.price);
     case "price-desc":
       return list.sort((a, b) => b.price - a.price);
-    case "rating":
-      return list.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
     case "duration":
       return list.sort((a, b) => a.durationDays - b.durationDays);
     case "departure":
       return list.sort((a, b) => nextDate(a).localeCompare(nextDate(b)));
     default:
-      return f.query ? list : list.sort((a, b) => Number(b.featured) - Number(a.featured) || b.reviewCount - a.reviewCount);
+      return f.query ? list : list.sort((a, b) => Number(b.featured) - Number(a.featured));
   }
 }
 
@@ -91,12 +89,5 @@ export function activeFilterCount(f: PackageFilters) {
 }
 
 export function upcomingMonths(count = 9) {
-  const now = new Date();
-  return Array.from({ length: count }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    return {
-      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      label: d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
-    };
-  });
+  return upcomingCalendarMonths(count, "short");
 }

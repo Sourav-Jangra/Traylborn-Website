@@ -29,4 +29,4 @@ export const emptyDetails: TravellerDetails = {
   notes: "",
 };
 
-export const STEPS = ["Trip", "Travellers", "Review", "Payment"] as const;
+export const STEPS = ["Trip", "Travellers", "Review"] as const;

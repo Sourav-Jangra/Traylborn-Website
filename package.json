@@ -7,8 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:setup": "node --env-file=.env.local scripts/seed-packages.mjs",
-    "db:reset-demo": "node --env-file=.env.local scripts/reset-demo.mjs"
+    "typecheck": "next typegen && tsc --noEmit",
+    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
+    "db:migrate:status": "node --env-file-if-exists=.env.local scripts/migrate.mjs --status",
+    "db:seed": "node --env-file-if-exists=.env.local scripts/seed-dev.mjs",
+    "admin:password": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/admin-password.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

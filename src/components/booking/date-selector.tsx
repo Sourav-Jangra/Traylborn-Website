@@ -45,11 +45,11 @@ export function DateSelector({ departures, value, onChange, durationDays, ruleLa
 
   const current = months[Math.min(monthIndex, months.length - 1)];
   const first = parseISODate(`${current}-01`);
-  const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
-  const leading = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  const leading = (first.getUTCDay() + 6) % 7;
   const cells: (string | null)[] = [
     ...Array.from({ length: leading }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => toISODate(new Date(first.getFullYear(), first.getMonth(), i + 1))),
+    ...Array.from({ length: daysInMonth }, (_, i) => toISODate(new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), i + 1)))),
   ];
   const selected = value ? byDate.get(value) : undefined;
   const datesThisMonth = departures.filter((d) => monthKey(d.date) === current).length;
@@ -75,7 +75,7 @@ export function DateSelector({ departures, value, onChange, durationDays, ruleLa
         </button>
         <div className="text-center" aria-live="polite">
           <p className="font-display text-lg font-semibold">
-            {first.toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
+            {first.toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" })}
           </p>
           <p className="text-xs text-muted-foreground">{datesThisMonth} departure {datesThisMonth === 1 ? "date" : "dates"}</p>
         </div>

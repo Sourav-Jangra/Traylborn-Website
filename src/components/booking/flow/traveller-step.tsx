@@ -21,21 +21,13 @@ interface TravellerStepProps {
   participants: number;
   errors: DetailErrors;
   onChange: (patch: Partial<TravellerDetails>) => void;
-  onPrefill: () => void;
 }
 
-export function TravellerStep({ details, participants, errors, onChange, onPrefill }: TravellerStepProps) {
+export function TravellerStep({ details, participants, errors, onChange }: TravellerStepProps) {
   const companions = Array.from({ length: participants - 1 }, (_, i) => details.companions[i] ?? "");
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-pine-50 px-4 py-3 text-sm">
-        <span className="text-pine-800">Already travelled with us? Sign in to autofill your details.</span>
-        <button type="button" onClick={onPrefill} className="font-semibold text-pine-800 underline underline-offset-4">
-          Use demo account
-        </button>
-      </div>
-
       <fieldset>
         <legend className="font-display text-xl font-semibold">Lead traveller</legend>
         <p className="mt-1 text-sm text-muted-foreground">How we can reach you about this trip.</p>

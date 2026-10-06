@@ -1,23 +1,38 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Info, Pencil } from "lucide-react";
+import { WhatsappIcon } from "@/components/brand/social-icons";
+import { whatsappLink } from "@/lib/config/site";
 import type { PriceBreakdown } from "@/lib/utils/pricing";
 import { addDays, formatDateLong, formatPrice } from "@/lib/utils/format";
 import type { CheckoutPackage, TravellerDetails } from "./types";
-import { cn } from "@/lib/utils";
 
 interface ReviewStepProps {
   pkg: CheckoutPackage;
   date: string;
   details: TravellerDetails;
   breakdown: PriceBreakdown;
-  agreed: boolean;
-  onAgree: (v: boolean) => void;
-  agreeError: boolean;
   onEdit: (step: number) => void;
 }
 
-export function ReviewStep({ pkg, date, details, breakdown, agreed, onAgree, agreeError, onEdit }: ReviewStepProps) {
+/** WhatsApp message carrying the reviewed trip and traveller details to the Traylborn team. */
+export function bookingWhatsappLink(pkg: CheckoutPackage, date: string, details: TravellerDetails, breakdown: PriceBreakdown) {
+  const companions = details.companions.map((c) => c.trim()).filter(Boolean);
+  const lines = [
+    `Hi Traylborn! I'd like to book ${pkg.title}.`,
+    `Departure: ${formatDateLong(date)}`,
+    `Travellers: ${breakdown.participants} (${formatPrice(breakdown.basePrice)} per person, total ${formatPrice(breakdown.total)})`,
+    `Lead traveller: ${details.name.trim()}, ${details.phone.trim()}, ${details.email.trim()}, ${details.city.trim()}`,
+    companions.length ? `Other travellers: ${companions.join(", ")}` : "",
+    details.emergencyName.trim() || details.emergencyPhone.trim()
+      ? `Emergency contact: ${[details.emergencyName.trim(), details.emergencyPhone.trim()].filter(Boolean).join(", ")}`
+      : "",
+    details.notes.trim() ? `Notes: ${details.notes.trim()}` : "",
+  ];
+  return whatsappLink(lines.filter(Boolean).join("\n"));
+}
+
+export function ReviewStep({ pkg, date, details, breakdown, onEdit }: ReviewStepProps) {
   return (
     <div className="space-y-6">
       <ReviewBlock title="Your trip" onEdit={() => onEdit(0)}>
@@ -46,12 +61,23 @@ export function ReviewStep({ pkg, date, details, breakdown, agreed, onAgree, agr
         <p className="font-display text-xl font-semibold text-ink">{formatPrice(breakdown.total)}</p>
       </ReviewBlock>
 
-      <label className={cn("flex items-start gap-3 text-sm", agreeError && "text-destructive")}>
-        <input type="checkbox" checked={agreed} onChange={(e) => onAgree(e.target.checked)} className="mt-0.5 size-4 accent-pine-800" aria-invalid={agreeError} />
-        <span>
-          I agree to Traylborn&apos;s terms and confirm all travellers are medically fit for this journey.
-        </span>
-      </label>
+      <div className="rounded-2xl bg-pine-50 p-5 text-sm ring-1 ring-pine-200">
+        <p className="flex items-center gap-2 font-semibold text-pine-800">
+          <Info className="size-4 shrink-0" aria-hidden="true" /> Online booking isn&apos;t available yet
+        </p>
+        <p className="mt-1.5 text-pine-800/80">
+          Nothing has been booked or paid. Send these details to our team on WhatsApp and we&apos;ll confirm your
+          departure and how to pay.
+        </p>
+        <a
+          href={bookingWhatsappLink(pkg, date, details, breakdown)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex h-12 items-center gap-2 rounded-full bg-[#25D366] px-6 font-semibold text-white transition-colors hover:bg-[#1fbb59]"
+        >
+          <WhatsappIcon className="size-4" /> Send details on WhatsApp
+        </a>
+      </div>
     </div>
   );
 }

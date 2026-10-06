@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { WhatsappIcon } from "@/components/brand/social-icons";
 import { Accent } from "@/components/layout/section-heading";
-import { whatsappLink } from "@/lib/mock-data/site";
+import { whatsappLink } from "@/lib/config/site";
 
 export function FinalCta() {
   return (

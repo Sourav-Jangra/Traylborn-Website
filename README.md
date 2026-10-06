@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Traylborn website
 
-## Getting Started
+Next.js 16 app backed by MariaDB 11.8+ or MySQL 8+.
 
-First, run the development server:
+## Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. `npm install`
+2. Copy `.env.example` to `.env.local` and fill in the database connection.
+3. `npm run db:migrate` — creates or upgrades the schema. Safe to re-run; it only applies
+   migrations that haven't run yet and never drops data.
+4. Create the admin account (the password is asked for in a hidden prompt):
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   npm run admin:password -- --email <email> --name "<name>"
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   Run the same command without `--name` to reset a forgotten password. Resetting signs
+   that admin out everywhere and clears failed sign-in lockouts.
+5. `npm run dev`, then sign in at `/admin/login`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+For a local database only, `npm run db:seed` adds the sample packages from
+`db/seed/dev-packages.json` (existing packages are never overwritten).
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Script | Purpose |
+| --- | --- |
+| `npm run db:migrate` | Apply pending migrations from `db/migrations` |
+| `npm run db:migrate:status` | List applied and pending migrations |
+| `npm run admin:password` | Create an admin or reset an admin's password |
+| `npm run typecheck` / `npm run lint` / `npm run build` | Checks and production build |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Migrations
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Add a new file `db/migrations/NNNN_description.sql` for every schema change. Never edit a
+migration that has already been applied: the runner stores a checksum and stops if a file
+changes. Statements that can lose data (DROP, TRUNCATE, DELETE FROM, RENAME, MODIFY,
+CHANGE) are refused unless the file's first line is `-- allow-destructive`.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All DATETIME columns hold UTC. Calendar dates (departures) are DATE values handled as
+plain `YYYY-MM-DD` strings, and "today" is always the date in India (Asia/Kolkata).

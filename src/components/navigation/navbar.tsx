@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Menu, Search } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { MobileMenu } from "./mobile-menu";
-import { mainNav } from "@/lib/mock-data/site";
+import { mainNav } from "@/lib/config/site";
 import { cn } from "@/lib/utils";
 
 /** Routes that open with a full-bleed dark hero, where the navbar starts transparent. */

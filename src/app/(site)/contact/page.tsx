@@ -4,12 +4,18 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { EnquiryForm } from "@/components/contact/enquiry-form";
 import { WhatsappIcon, InstagramIcon, FacebookIcon, YoutubeIcon } from "@/components/brand/social-icons";
 import { Accent } from "@/components/layout/section-heading";
-import { siteConfig, whatsappLink } from "@/lib/mock-data/site";
+import { siteConfig, whatsappLink } from "@/lib/config/site";
 
 export const metadata: Metadata = {
   title: "Contact",
   description: "Talk to Traylborn — call, WhatsApp, email or visit us at Sector 17C, Chandigarh to plan your next trek, road trip or retreat.",
 };
+
+const socials = [
+  { Icon: InstagramIcon, label: "Instagram", href: siteConfig.social.instagram },
+  { Icon: FacebookIcon, label: "Facebook", href: siteConfig.social.facebook },
+  { Icon: YoutubeIcon, label: "YouTube", href: siteConfig.social.youtube },
+].filter((s): s is typeof s & { href: string } => Boolean(s.href));
 
 const channels = [
   { Icon: WhatsappIcon, label: "WhatsApp", value: siteConfig.phone, note: "Message us on WhatsApp", href: whatsappLink(), external: true },
@@ -84,20 +90,18 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4 rounded-[1.5rem] bg-pine-950 p-5 text-white">
-              <p className="text-sm font-medium">Follow the trail</p>
-              <div className="flex gap-2">
-                {[
-                  { Icon: InstagramIcon, label: "Instagram", href: siteConfig.social.instagram },
-                  { Icon: FacebookIcon, label: "Facebook", href: siteConfig.social.facebook },
-                  { Icon: YoutubeIcon, label: "YouTube", href: siteConfig.social.youtube },
-                ].map(({ Icon, label, href }) => (
-                  <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-white/20">
-                    <Icon className="size-4" />
-                  </a>
-                ))}
+            {socials.length > 0 && (
+              <div className="flex items-center justify-between gap-4 rounded-[1.5rem] bg-pine-950 p-5 text-white">
+                <p className="text-sm font-medium">Follow the trail</p>
+                <div className="flex gap-2">
+                  {socials.map(({ Icon, label, href }) => (
+                    <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+                      <Icon className="size-4" />
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>

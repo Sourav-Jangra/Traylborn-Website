@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import type { CategoryMeta } from "@/lib/mock-data/categories";
+import type { CategoryMeta } from "@/lib/config/categories";
 import { cn } from "@/lib/utils";
 
 interface CategoryCardProps {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, Clock, Gauge, MapPin, Mountain, Route, Sun, Users } from "lucide-react";
 import type { TravelPackage } from "@/lib/types";
-import { categoryMeta } from "@/lib/mock-data/categories";
+import { categoryMeta } from "@/lib/config/categories";
 import { DifficultyBadge, Rating } from "@/components/packages/package-meta";
 import { ShareButton } from "./share-button";
 import { formatDate, formatDuration } from "@/lib/utils/format";

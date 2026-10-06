@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CategoryPage } from "@/components/packages/category-page";
-import { categoryMeta } from "@/lib/mock-data/categories";
+import { categoryMeta } from "@/lib/config/categories";
 
 export const metadata: Metadata = {
   title: "Wellness Retreats",

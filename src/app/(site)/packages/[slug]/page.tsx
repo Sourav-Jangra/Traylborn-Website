@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Backpack, Sparkles } from "lucide-react";
 import { getPackageBySlug, getRelatedPackages } from "@/server/packages";
-import { whatsappLink } from "@/lib/mock-data/site";
+import { whatsappLink } from "@/lib/config/site";
 import { getDepartures, getNextDeparture } from "@/lib/utils/departures";
 import { formatPrice } from "@/lib/utils/format";
 import { BookingProvider } from "@/components/booking/booking-context";

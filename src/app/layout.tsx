@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Inter, Instrument_Serif } from "next/font/google";
 import { MotionProvider } from "@/components/ui/motion";
-import { siteConfig } from "@/lib/mock-data/site";
+import { siteConfig } from "@/lib/config/site";
 import "./globals.css";
 
 const inter = Inter({

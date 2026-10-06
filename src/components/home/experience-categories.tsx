@@ -1,7 +1,7 @@
 import { SectionHeading, Accent } from "@/components/layout/section-heading";
 import { CategoryCard } from "@/components/packages/category-card";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
-import { categories } from "@/lib/mock-data/categories";
+import { categories } from "@/lib/config/categories";
 import { getPublishedPackages } from "@/server/packages";
 
 export async function ExperienceCategories() {

@@ -1,5 +1,7 @@
 import type { DepartureRule, TravelPackage } from "@/lib/types";
-import { formatDate, parseISODate, toISODate } from "./format";
+import { formatDate, parseISODate, toISODate, todayISO } from "./format";
+
+export { todayISO };
 
 export const MAX_PARTICIPANTS = 25;
 
@@ -8,10 +10,6 @@ export interface Departure {
 }
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-export function todayISO() {
-  return toISODate(new Date());
-}
 
 export function isDateAllowed(rule: DepartureRule, iso: string, fromISO = todayISO()) {
   if (iso < fromISO) return false;
@@ -24,7 +22,7 @@ export function isDateAllowed(rule: DepartureRule, iso: string, fromISO = todayI
       return (
         iso >= rule.startDate &&
         iso <= rule.endDate &&
-        rule.weekdays.includes(parseISODate(iso).getDay())
+        rule.weekdays.includes(parseISODate(iso).getUTCDay())
       );
   }
 }
@@ -41,7 +39,7 @@ export function getDepartures(pkg: Pick<TravelPackage, "departureRule">, limit =
   const out: Departure[] = [];
   const start = parseISODate(rule.startDate > fromISO ? rule.startDate : fromISO);
   const end = parseISODate(rule.endDate);
-  for (const d = start; d <= end && out.length < limit; d.setDate(d.getDate() + 1)) {
+  for (const d = start; d <= end && out.length < limit; d.setUTCDate(d.getUTCDate() + 1)) {
     const iso = toISODate(d);
     if (isDateAllowed(rule, iso, fromISO)) out.push({ date: iso });
   }

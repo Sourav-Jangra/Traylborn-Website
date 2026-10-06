@@ -3,20 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { CalendarDays, ChevronDown, Compass, MapPin, Search } from "lucide-react";
-import { categories } from "@/lib/mock-data/categories";
+import { categories } from "@/lib/config/categories";
+import { upcomingCalendarMonths } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 
 const destinations = ["Manali", "Kasol", "Chopta", "Sankri", "Spiti", "Ladakh", "Kinnaur", "Rishikesh", "McLeodganj"];
 
 function upcomingMonths(count = 8) {
-  const now = new Date();
-  return Array.from({ length: count }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    return {
-      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      label: d.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-    };
-  });
+  return upcomingCalendarMonths(count, "long");
 }
 
 export function HeroSearch({ className }: { className?: string }) {

@@ -1,5 +1,5 @@
 import type { Category, TravelPackage } from "@/lib/types";
-import { categoryMeta } from "@/lib/mock-data/categories";
+import { categoryMeta } from "@/lib/config/categories";
 
 function haystack(pkg: TravelPackage) {
   return [

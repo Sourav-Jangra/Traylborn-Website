@@ -77,45 +77,6 @@ export interface TravelPackage {
   badge?: string;
 }
 
-export interface Review {
-  id: string;
-  name: string;
-  city: string;
-  packageSlug: string;
-  tripName: string;
-  rating: number;
-  title: string;
-  body: string;
-  date: string;
-  photo?: string;
-}
-
-export interface Coupon {
-  code: string;
-  type: "percent" | "flat";
-  value: number;
-  description: string;
-  minParticipants?: number;
-  expiresOn: string;
-  active: boolean;
-}
-
-export type BookingStatus = "Confirmed" | "Pending payment" | "Completed" | "Cancelled";
-
-export interface Booking {
-  id: string;
-  packageSlug: string;
-  tripName: string;
-  customerName: string;
-  customerEmail: string;
-  departureDate: string;
-  participants: number;
-  amount: number;
-  status: BookingStatus;
-  bookedOn: string;
-  coupon?: string;
-}
-
 export interface GalleryItem {
   src: string;
   alt: string;

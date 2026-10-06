@@ -8,7 +8,7 @@ import { ParticipantSelector } from "./participant-selector";
 import { WhatsappIcon } from "@/components/brand/social-icons";
 import { calculatePrice } from "@/lib/utils/pricing";
 import { formatDate, formatPrice } from "@/lib/utils/format";
-import { whatsappLink } from "@/lib/mock-data/site";
+import { whatsappLink } from "@/lib/config/site";
 import { cn } from "@/lib/utils";
 
 interface BookingPanelProps {

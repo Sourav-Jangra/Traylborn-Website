@@ -7,7 +7,7 @@ import { CalendarDays, Search, X } from "lucide-react";
 import type { Category, TravelPackage } from "@/lib/types";
 import { m } from "@/components/ui/motion";
 import { PackageCard } from "@/components/packages/package-card";
-import { categories } from "@/lib/mock-data/categories";
+import { categories } from "@/lib/config/categories";
 import { searchPackages } from "@/lib/utils/search";
 import { getDepartures } from "@/lib/utils/departures";
 import { upcomingMonths } from "@/lib/utils/filters";

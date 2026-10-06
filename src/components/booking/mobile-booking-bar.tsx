@@ -7,7 +7,7 @@ import { BookingPanel } from "./booking-panel";
 import { WhatsappIcon } from "@/components/brand/social-icons";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatDate, formatPrice } from "@/lib/utils/format";
-import { whatsappLink } from "@/lib/mock-data/site";
+import { whatsappLink } from "@/lib/config/site";
 
 /** Sticky bottom CTA for mobile; opens the full booking panel in a bottom sheet. */
 export function MobileBookingBar() {

@@ -8,15 +8,13 @@ import { m, EASE } from "@/components/ui/motion";
 import type { Departure } from "@/lib/utils/departures";
 import { calculatePrice } from "@/lib/utils/pricing";
 import { formatPrice } from "@/lib/utils/format";
-import { demoCustomer } from "@/lib/mock-data/bookings";
+import { WhatsappIcon } from "@/components/brand/social-icons";
 import { DateSelector } from "../date-selector";
 import { ParticipantSelector } from "../participant-selector";
 import { Stepper } from "./stepper";
 import { OrderSummaryCard } from "./order-summary-card";
 import { TravellerStep, validateDetails, type DetailErrors } from "./traveller-step";
-import { ReviewStep } from "./review-step";
-import { PaymentStep } from "./payment-step";
-import { Confirmation } from "./confirmation";
+import { ReviewStep, bookingWhatsappLink } from "./review-step";
 import { emptyDetails, STEPS, type CheckoutPackage, type TravellerDetails } from "./types";
 
 interface BookingFlowProps {
@@ -29,8 +27,7 @@ interface BookingFlowProps {
 const stepTitles = [
   { title: "Choose your departure", sub: "Pick a date and tell us how many are coming." },
   { title: "Who's travelling?", sub: "A few details so your trek leader knows who to expect." },
-  { title: "Review your booking", sub: "Check everything looks right before payment." },
-  { title: "Payment", sub: "Choose how you'd like to pay." },
+  { title: "Review your trip", sub: "Check everything looks right, then send it to our team." },
 ];
 
 export function BookingFlow({ pkg, departures, initialDate, initialParticipants }: BookingFlowProps) {
@@ -39,11 +36,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
   const [participants, setParticipants] = useState(initialParticipants);
   const [details, setDetails] = useState<TravellerDetails>(emptyDetails);
   const [errors, setErrors] = useState<DetailErrors>({});
-  const [agreed, setAgreed] = useState(false);
-  const [agreeError, setAgreeError] = useState(false);
   const [dateError, setDateError] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [bookingId, setBookingId] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
 
@@ -56,7 +49,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
     headingRef.current?.focus({ preventScroll: true });
-  }, [step, bookingId]);
+  }, [step]);
 
   const next = () => {
     if (step === 0) {
@@ -70,27 +63,8 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
         return;
       }
       setStep(2);
-    } else if (step === 2) {
-      if (!agreed) return setAgreeError(true);
-      setStep(3);
     }
   };
-
-  const pay = () => {
-    setProcessing(true);
-    window.setTimeout(() => {
-      setBookingId(`TRB-2026-${String(10000 + Math.floor(Math.random() * 89999))}`);
-      setProcessing(false);
-    }, 1800);
-  };
-
-  if (bookingId && date) {
-    return (
-      <Confirmation bookingId={bookingId} pkg={pkg} date={date} details={details} breakdown={breakdown} />
-    );
-  }
-
-  const ctaLabel = step === 2 ? "Continue to payment" : "Continue";
 
   return (
     <div className="container-page pt-6 pb-32 sm:pt-10 lg:pb-20">
@@ -161,38 +135,15 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
                         return copy;
                       });
                     }}
-                    onPrefill={() => {
-                      setDetails((d) => ({
-                        ...d,
-                        name: demoCustomer.name,
-                        email: demoCustomer.email,
-                        phone: demoCustomer.phone,
-                        city: demoCustomer.city,
-                      }));
-                      setErrors({});
-                    }}
                   />
                 )}
                 {step === 2 && date && (
-                  <ReviewStep
-                    pkg={pkg}
-                    date={date}
-                    details={details}
-                    breakdown={breakdown}
-                    agreed={agreed}
-                    onAgree={(v) => {
-                      setAgreed(v);
-                      setAgreeError(false);
-                    }}
-                    agreeError={agreeError}
-                    onEdit={setStep}
-                  />
+                  <ReviewStep pkg={pkg} date={date} details={details} breakdown={breakdown} onEdit={setStep} />
                 )}
-                {step === 3 && <PaymentStep amount={breakdown.total} processing={processing} onPay={pay} />}
               </m.div>
             </AnimatePresence>
 
-            {step < 3 && (
+            {step < 2 && (
               <div className="mt-10 hidden items-center justify-between gap-4 border-t border-border pt-6 lg:flex">
                 <p className="text-sm text-muted-foreground">
                   Total <span className="font-display text-xl font-semibold text-ink">{formatPrice(breakdown.total)}</span>
@@ -202,7 +153,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
                   onClick={next}
                   className="inline-flex h-13 items-center gap-2 rounded-full bg-ember-500 px-8 font-semibold text-ink transition-colors hover:bg-ember-400"
                 >
-                  {ctaLabel} <ArrowRight className="size-4" />
+                  Continue <ArrowRight className="size-4" />
                 </button>
               </div>
             )}
@@ -214,25 +165,34 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
         </div>
       </div>
 
-      {step < 3 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
-          <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">
-                {participants} × {formatPrice(pkg.price)}
-              </p>
-              <p className="font-display text-xl font-semibold text-ink">{formatPrice(breakdown.total)}</p>
-            </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">
+              {participants} × {formatPrice(pkg.price)}
+            </p>
+            <p className="font-display text-xl font-semibold text-ink">{formatPrice(breakdown.total)}</p>
+          </div>
+          {step === 2 && date ? (
+            <a
+              href={bookingWhatsappLink(pkg, date, details, breakdown)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-[#25D366] px-6 text-sm font-semibold text-white"
+            >
+              <WhatsappIcon className="size-4" /> Send on WhatsApp
+            </a>
+          ) : (
             <button
               type="button"
               onClick={next}
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-ember-500 px-6 text-sm font-semibold text-ink"
             >
-              {step === 2 ? "Pay" : "Continue"} <ArrowRight className="size-4" />
+              Continue <ArrowRight className="size-4" />
             </button>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { connection } from "next/server";
-import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import type {
   Category,
   DepartureRule,
@@ -14,8 +14,10 @@ import type {
   TravelPackage,
 } from "@/lib/types";
 import { describeDepartures } from "@/lib/utils/departures";
-import { db } from "./db";
+import { recordAudit, diff, type Actor } from "./audit";
+import { db, parseJson, withTransaction } from "./db";
 
+/** JSON columns arrive as text (see db.ts) and are parsed in toPackage. */
 interface PackageRow extends RowDataPacket {
   id: number;
   slug: string;
@@ -41,19 +43,20 @@ interface PackageRow extends RowDataPacket {
   featured: number;
   status: PackageStatus;
   badge: string | null;
-  images: PackageImage[];
-  highlights: string[];
-  itinerary: ItineraryDay[];
-  inclusions: string[];
-  exclusions: string[];
-  things_to_carry: string[] | null;
-  faqs: FAQ[];
-  best_season: Season[];
-  tags: string[];
-  departure_rule: DepartureRule;
+  images: string;
+  highlights: string;
+  itinerary: string;
+  inclusions: string;
+  exclusions: string;
+  things_to_carry: string | null;
+  faqs: string;
+  best_season: string;
+  tags: string;
+  departure_rule: string;
 }
 
 function toPackage(row: PackageRow): TravelPackage {
+  const departureRule = parseJson<DepartureRule>(row.departure_rule);
   return {
     id: String(row.id),
     slug: row.slug,
@@ -75,23 +78,23 @@ function toPackage(row: PackageRow): TravelPackage {
     difficulty: row.difficulty,
     maxAltitude: row.max_altitude ?? undefined,
     distance: row.distance ?? undefined,
-    bestSeason: row.best_season,
+    bestSeason: parseJson<Season[]>(row.best_season),
     groupSize: row.group_size,
     ageLimit: row.age_limit,
-    images: row.images,
+    images: parseJson<PackageImage[]>(row.images),
     video: row.video ?? undefined,
     description: row.description,
-    highlights: row.highlights,
-    itinerary: row.itinerary,
-    inclusions: row.inclusions,
-    exclusions: row.exclusions,
-    thingsToCarry: row.things_to_carry ?? undefined,
-    faqs: row.faqs,
-    departureRule: row.departure_rule,
-    departureLabel: describeDepartures(row.departure_rule),
+    highlights: parseJson<string[]>(row.highlights),
+    itinerary: parseJson<ItineraryDay[]>(row.itinerary),
+    inclusions: parseJson<string[]>(row.inclusions),
+    exclusions: parseJson<string[]>(row.exclusions),
+    thingsToCarry: row.things_to_carry === null ? undefined : parseJson<string[]>(row.things_to_carry),
+    faqs: parseJson<FAQ[]>(row.faqs),
+    departureRule,
+    departureLabel: describeDepartures(departureRule),
     featured: Boolean(row.featured),
     status: row.status,
-    tags: row.tags,
+    tags: parseJson<string[]>(row.tags),
     badge: row.badge ?? undefined,
   };
 }
@@ -163,20 +166,146 @@ export interface PackageUpdate {
   badge: string | null;
 }
 
+/** The admin-editable fields of a stored package, in PackageUpdate shape, for audit entries. */
+function editableFields(row: PackageRow): PackageUpdate {
+  const p = toPackage(row);
+  return {
+    title: p.title,
+    tagline: p.tagline,
+    category: p.category,
+    region: p.region,
+    durationDays: p.durationDays,
+    nights: p.nights,
+    difficulty: p.difficulty,
+    startingPoint: p.startingPoint,
+    endingPoint: p.endingPoint,
+    groupSize: p.groupSize,
+    price: p.price,
+    originalPrice: p.originalPrice ?? null,
+    images: p.images,
+    description: p.description,
+    highlights: p.highlights,
+    inclusions: p.inclusions,
+    exclusions: p.exclusions,
+    itinerary: p.itinerary,
+    departureRule: p.departureRule,
+    featured: p.featured,
+    status: p.status,
+    badge: p.badge ?? null,
+  };
+}
+
+async function lockPackage(conn: PoolConnection, slug: string) {
+  const [rows] = await conn.query<PackageRow[]>("SELECT * FROM packages WHERE slug = ? FOR UPDATE", [slug]);
+  return rows[0];
+}
+
 /** Returns false when the slug is already taken. */
-export async function createPackage(slug: string, u: PackageUpdate) {
+export async function createPackage(slug: string, u: PackageUpdate, actor: Actor) {
   try {
-    await db.execute(
-      `INSERT INTO packages (
-         slug, title, tagline, category, region, duration_days, nights,
-         difficulty, starting_point, ending_point, group_size,
-         price, original_price, images, description, highlights,
-         inclusions, exclusions, itinerary,
-         departure_rule, featured, status, badge,
-         faqs, best_season, tags
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', '[]', '[]')`,
+    await withTransaction(async (conn) => {
+      const [result] = await conn.execute<ResultSetHeader>(
+        `INSERT INTO packages (
+           slug, title, tagline, category, region, duration_days, nights,
+           difficulty, starting_point, ending_point, group_size,
+           price, original_price, images, description, highlights,
+           inclusions, exclusions, itinerary,
+           departure_rule, featured, status, badge,
+           faqs, best_season, tags
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', '[]', '[]')`,
+        [
+          slug,
+          u.title,
+          u.tagline,
+          u.category,
+          u.region,
+          u.durationDays,
+          u.nights,
+          u.difficulty,
+          u.startingPoint,
+          u.endingPoint,
+          u.groupSize,
+          u.price,
+          u.originalPrice,
+          JSON.stringify(u.images),
+          u.description,
+          JSON.stringify(u.highlights),
+          JSON.stringify(u.inclusions),
+          JSON.stringify(u.exclusions),
+          JSON.stringify(u.itinerary),
+          JSON.stringify(u.departureRule),
+          u.featured ? 1 : 0,
+          u.status,
+          u.badge,
+        ],
+      );
+      await recordAudit(
+        actor,
+        { action: "package.create", entityType: "package", entityId: slug, after: { id: result.insertId, slug, ...u } },
+        conn,
+      );
+    });
+    return true;
+  } catch (e) {
+    if ((e as { code?: string }).code === "ER_DUP_ENTRY") return false;
+    throw e;
+  }
+}
+
+/** Returns false when no package has this slug. */
+export async function setPackageStatus(slug: string, status: PackageStatus, actor: Actor) {
+  return withTransaction(async (conn) => {
+    const row = await lockPackage(conn, slug);
+    if (!row) return false;
+    if (row.status === status) return true;
+    await conn.execute("UPDATE packages SET status = ? WHERE id = ?", [status, row.id]);
+    await recordAudit(
+      actor,
+      { action: "package.status", entityType: "package", entityId: slug, before: { status: row.status }, after: { status } },
+      conn,
+    );
+    return true;
+  });
+}
+
+/** Returns false when no package has this slug. */
+export async function setPackageFeatured(slug: string, featured: boolean, actor: Actor) {
+  return withTransaction(async (conn) => {
+    const row = await lockPackage(conn, slug);
+    if (!row) return false;
+    if (Boolean(row.featured) === featured) return true;
+    await conn.execute("UPDATE packages SET featured = ? WHERE id = ?", [featured ? 1 : 0, row.id]);
+    await recordAudit(
+      actor,
+      {
+        action: "package.featured",
+        entityType: "package",
+        entityId: slug,
+        before: { featured: Boolean(row.featured) },
+        after: { featured },
+      },
+      conn,
+    );
+    return true;
+  });
+}
+
+/** Returns false when no package has this slug. */
+export async function updatePackage(slug: string, u: PackageUpdate, actor: Actor) {
+  return withTransaction(async (conn) => {
+    const row = await lockPackage(conn, slug);
+    if (!row) return false;
+    const changes = diff({ ...editableFields(row) }, { ...u });
+    if (!changes.changed) return true;
+    await conn.execute(
+      `UPDATE packages SET
+         title = ?, tagline = ?, category = ?, region = ?, duration_days = ?, nights = ?,
+         difficulty = ?, starting_point = ?, ending_point = ?, group_size = ?,
+         price = ?, original_price = ?, images = ?, description = ?, highlights = ?,
+         inclusions = ?, exclusions = ?, itinerary = ?,
+         departure_rule = ?, featured = ?, status = ?, badge = ?
+       WHERE id = ?`,
       [
-        slug,
         u.title,
         u.tagline,
         u.category,
@@ -199,62 +328,14 @@ export async function createPackage(slug: string, u: PackageUpdate) {
         u.featured ? 1 : 0,
         u.status,
         u.badge,
+        row.id,
       ],
     );
+    await recordAudit(
+      actor,
+      { action: "package.update", entityType: "package", entityId: slug, before: changes.before, after: changes.after },
+      conn,
+    );
     return true;
-  } catch (e) {
-    if ((e as { code?: string }).code === "ER_DUP_ENTRY") return false;
-    throw e;
-  }
-}
-
-/** Returns false when no package has this slug. */
-export async function setPackageStatus(slug: string, status: PackageStatus) {
-  const [result] = await db.execute<ResultSetHeader>("UPDATE packages SET status = ? WHERE slug = ?", [status, slug]);
-  return result.affectedRows > 0;
-}
-
-/** Returns false when no package has this slug. */
-export async function setPackageFeatured(slug: string, featured: boolean) {
-  const [result] = await db.execute<ResultSetHeader>("UPDATE packages SET featured = ? WHERE slug = ?", [featured ? 1 : 0, slug]);
-  return result.affectedRows > 0;
-}
-
-/** Returns false when no package has this slug. */
-export async function updatePackage(slug: string, u: PackageUpdate) {
-  const [result] = await db.execute<ResultSetHeader>(
-    `UPDATE packages SET
-       title = ?, tagline = ?, category = ?, region = ?, duration_days = ?, nights = ?,
-       difficulty = ?, starting_point = ?, ending_point = ?, group_size = ?,
-       price = ?, original_price = ?, images = ?, description = ?, highlights = ?,
-       inclusions = ?, exclusions = ?, itinerary = ?,
-       departure_rule = ?, featured = ?, status = ?, badge = ?
-     WHERE slug = ?`,
-    [
-      u.title,
-      u.tagline,
-      u.category,
-      u.region,
-      u.durationDays,
-      u.nights,
-      u.difficulty,
-      u.startingPoint,
-      u.endingPoint,
-      u.groupSize,
-      u.price,
-      u.originalPrice,
-      JSON.stringify(u.images),
-      u.description,
-      JSON.stringify(u.highlights),
-      JSON.stringify(u.inclusions),
-      JSON.stringify(u.exclusions),
-      JSON.stringify(u.itinerary),
-      JSON.stringify(u.departureRule),
-      u.featured ? 1 : 0,
-      u.status,
-      u.badge,
-      slug,
-    ],
-  );
-  return result.affectedRows > 0;
+  });
 }

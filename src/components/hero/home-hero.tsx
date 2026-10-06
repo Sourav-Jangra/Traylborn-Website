@@ -6,7 +6,7 @@ import { m, EASE } from "@/components/ui/motion";
 import { HeroMedia } from "./hero-media";
 import { HeroSearch } from "@/components/search/hero-search";
 import { Accent } from "@/components/layout/section-heading";
-import { categories } from "@/lib/mock-data/categories";
+import { categories } from "@/lib/config/categories";
 
 const fadeUp = (delay: number) => ({
   initial: { opacity: 0, y: 28 },

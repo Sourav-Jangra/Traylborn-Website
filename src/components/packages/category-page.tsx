@@ -3,9 +3,9 @@ import type { Category } from "@/lib/types";
 import { PageHero } from "@/components/hero/page-hero";
 import { PackageListing } from "./package-listing";
 import { WhatsappIcon } from "@/components/brand/social-icons";
-import { categoryMeta, categories } from "@/lib/mock-data/categories";
+import { categoryMeta, categories } from "@/lib/config/categories";
 import { getPackagesByCategory } from "@/server/packages";
-import { whatsappLink } from "@/lib/mock-data/site";
+import { whatsappLink } from "@/lib/config/site";
 import { cn } from "@/lib/utils";
 
 export async function CategoryPage({ category }: { category: Category }) {

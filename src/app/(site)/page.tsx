@@ -4,9 +4,8 @@ import { FeaturedJourneys } from "@/components/home/featured-journeys";
 import { ExperienceCategories } from "@/components/home/experience-categories";
 import { WhyTraylborn } from "@/components/home/why-traylborn";
 import { EditorialFeature } from "@/components/home/editorial-feature";
-import { GallerySection } from "@/components/home/gallery-section";
 import { FinalCta } from "@/components/home/final-cta";
-import { siteConfig } from "@/lib/mock-data/site";
+import { siteConfig } from "@/lib/config/site";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -37,7 +36,6 @@ export default function HomePage() {
       <ExperienceCategories />
       <EditorialFeature />
       <WhyTraylborn />
-      <GallerySection />
       <FinalCta />
     </>
   );

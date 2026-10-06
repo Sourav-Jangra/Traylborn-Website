@@ -3,13 +3,14 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ExternalLink, LayoutDashboard, Menu, Package } from "lucide-react";
+import { ExternalLink, LayoutDashboard, LogOut, Menu, Package } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { logoutAction } from "@/app/admin/login/actions";
 
-// Bookings, Customers, Departures, Coupons, Offers, Reviews and Homepage still run on
-// sample data with non-persistent controls, so their routes are left out of the nav.
+type SignedInAdmin = { name: string; email: string };
+
 export const adminNav = [
   { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
   { label: "Packages", href: "/admin/packages", Icon: Package },
@@ -42,7 +43,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarBody({ admin, onNavigate }: { admin: SignedInAdmin; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-pine-950 p-4 text-white">
       <Link href="/admin" onClick={onNavigate} className="flex items-center gap-2.5 px-2 py-2">
@@ -58,23 +59,30 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           <ExternalLink className="size-4" /> View live site
         </Link>
         <div className="flex items-center gap-3 rounded-xl bg-white/6 p-3">
-          <span className="grid size-9 place-items-center rounded-lg bg-ember-500 text-sm font-bold text-ink">T</span>
-          <span className="min-w-0 text-sm">
-            <span className="block font-semibold">Traylborn</span>
-            <span className="block truncate text-xs text-white/60">Admin</span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-ember-500 text-sm font-bold text-ink uppercase">
+            {admin.name.trim().charAt(0) || "A"}
+          </span>
+          <span className="min-w-0 flex-1 text-sm">
+            <span className="block truncate font-semibold">{admin.name}</span>
+            <span className="block truncate text-xs text-white/60">{admin.email}</span>
           </span>
         </div>
+        <form action={logoutAction}>
+          <button type="submit" className="flex w-full items-center gap-2 px-3 text-sm text-white/65 hover:text-white">
+            <LogOut className="size-4" /> Sign out
+          </button>
+        </form>
       </div>
     </div>
   );
 }
 
-export function AdminShell({ children }: { children: ReactNode }) {
+export function AdminShell({ admin, children }: { admin: SignedInAdmin; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-svh bg-[#f4f5f3] lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-svh lg:block">
-        <SidebarBody />
+        <SidebarBody admin={admin} />
       </aside>
 
       <div className="min-w-0">
@@ -87,7 +95,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 border-0 p-0">
               <SheetTitle className="sr-only">Admin navigation</SheetTitle>
-              <SidebarBody onNavigate={() => setOpen(false)} />
+              <SidebarBody admin={admin} onNavigate={() => setOpen(false)} />
             </SheetContent>
           </Sheet>
           <span className="font-display font-bold tracking-[0.12em] text-pine-800">TRAYLBORN <span className="text-ember-600">ADMIN</span></span>

@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { WhatsappIcon } from "@/components/brand/social-icons";
-import { whatsappLink } from "@/lib/mock-data/site";
+import { whatsappLink } from "@/lib/config/site";
 import { cn } from "@/lib/utils";
 
 const HIDDEN_ON = [/^\/packages\//];

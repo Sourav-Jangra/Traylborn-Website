@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { FacebookIcon, InstagramIcon, YoutubeIcon } from "@/components/brand/social-icons";
-import { categories } from "@/lib/mock-data/categories";
-import { siteConfig } from "@/lib/mock-data/site";
+import { categories } from "@/lib/config/categories";
+import { siteConfig } from "@/lib/config/site";
 import { getFeaturedPackages } from "@/server/packages";
 
 const company = [
@@ -17,7 +17,7 @@ const socials = [
   { label: "Instagram", href: siteConfig.social.instagram, Icon: InstagramIcon },
   { label: "Facebook", href: siteConfig.social.facebook, Icon: FacebookIcon },
   { label: "YouTube", href: siteConfig.social.youtube, Icon: YoutubeIcon },
-];
+].filter((s): s is typeof s & { href: string } => Boolean(s.href));
 
 export async function Footer() {
   const popular = (await getFeaturedPackages()).slice(0, 5);
@@ -30,6 +30,7 @@ export async function Footer() {
           <p className="mt-5 max-w-sm text-sm leading-relaxed">
             Himalayan treks, road expeditions and mountain retreats — crafted in Chandigarh.
           </p>
+          {socials.length > 0 && (
           <ul className="mt-6 flex gap-2">
             {socials.map(({ label, href, Icon }) => (
               <li key={label}>
@@ -45,6 +46,7 @@ export async function Footer() {
               </li>
             ))}
           </ul>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-5">
@@ -100,11 +102,6 @@ export async function Footer() {
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col gap-3 py-6 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Traylborn. Born of Trails. Made for Journeys.</p>
-          <p className="flex gap-5">
-            <Link href="/about" className="hover:text-white">Privacy</Link>
-            <Link href="/about" className="hover:text-white">Terms</Link>
-            <Link href="/about" className="hover:text-white">Cancellation policy</Link>
-          </p>
         </div>
       </div>
     </footer>

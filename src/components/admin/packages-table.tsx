@@ -18,7 +18,9 @@ export interface PackageRow {
   image: string;
   category: Category;
   region: string;
+  /** Lowest option price. */
   price: number;
+  priceOptionCount: number;
   durationDays: number;
   nights: number;
   departureLabel: string;
@@ -114,7 +116,17 @@ export function PackagesTable({ rows: initial }: { rows: PackageRow[] }) {
                   </div>
                 </div>
               </td>
-              <td className="font-semibold whitespace-nowrap">{formatPrice(r.price)}</td>
+              <td className="whitespace-nowrap">
+                {r.priceOptionCount === 0 ? (
+                  <span className="text-destructive">No price</span>
+                ) : (
+                  <>
+                    {r.priceOptionCount > 1 && <span className="text-xs text-muted-foreground">From </span>}
+                    <span className="font-semibold">{formatPrice(r.price)}</span>
+                    {r.priceOptionCount > 1 && <span className="block text-xs text-muted-foreground">{r.priceOptionCount} options</span>}
+                  </>
+                )}
+              </td>
               <td className="text-muted-foreground">{r.departureLabel}</td>
               <td>
                 <button type="button" onClick={() => toggleFeatured(r)} disabled={pending === r.id} aria-pressed={r.featured} aria-label={`${r.featured ? "Unfeature" : "Feature"} ${r.title}`} className="grid size-8 place-items-center rounded-lg hover:bg-sand-100">

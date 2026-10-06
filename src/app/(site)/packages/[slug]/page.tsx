@@ -40,6 +40,8 @@ export default async function PackagePage({ params }: PageProps<"/packages/[slug
   const departures = getDepartures(pkg, 400);
   const next = getNextDeparture(pkg);
   const related = await getRelatedPackages(pkg);
+  const prices = pkg.priceOptions.map((o) => o.price);
+  const multiplePrices = pkg.priceOptions.length > 1;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -48,7 +50,9 @@ export default async function PackagePage({ params }: PageProps<"/packages/[slug
     description: pkg.description,
     image: pkg.images.map((i) => i.src),
     touristType: pkg.category,
-    offers: { "@type": "Offer", price: pkg.price, priceCurrency: "INR", availability: "https://schema.org/InStock" },
+    offers: multiplePrices
+      ? { "@type": "AggregateOffer", lowPrice: Math.min(...prices), highPrice: Math.max(...prices), offerCount: prices.length, priceCurrency: "INR", availability: "https://schema.org/InStock" }
+      : { "@type": "Offer", price: pkg.price, priceCurrency: "INR", availability: "https://schema.org/InStock" },
     ...(pkg.reviewCount > 0 && {
       aggregateRating: { "@type": "AggregateRating", ratingValue: pkg.rating, reviewCount: pkg.reviewCount },
     }),
@@ -62,6 +66,7 @@ export default async function PackagePage({ params }: PageProps<"/packages/[slug
         title: pkg.title,
         price: pkg.price,
         originalPrice: pkg.originalPrice,
+        pricing: { priceOptions: pkg.priceOptions, advancePayment: pkg.advancePayment },
         durationDays: pkg.durationDays,
         nights: pkg.nights,
         departureLabel: pkg.departureLabel,
@@ -100,7 +105,7 @@ export default async function PackagePage({ params }: PageProps<"/packages/[slug
             <DeparturesList />
           </DetailSection>
 
-          <DetailSection id="inclusions" eyebrow="Price & inclusions" title={`${formatPrice(pkg.price)} per person`}>
+          <DetailSection id="inclusions" eyebrow="Price & inclusions" title={`${multiplePrices ? "From " : ""}${formatPrice(pkg.price)} per person`}>
             <Inclusions inclusions={pkg.inclusions} exclusions={pkg.exclusions} />
             {pkg.thingsToCarry && (
               <div className="mt-4 rounded-3xl bg-sand-100 p-6">

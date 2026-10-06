@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { CalendarDays, MapPin, Users } from "lucide-react";
-import type { PriceBreakdown } from "@/lib/utils/pricing";
+import type { PriceQuote } from "@/lib/utils/pricing";
 import { addDays, formatDate } from "@/lib/utils/format";
 import { BookingSummary } from "../booking-summary";
 import type { CheckoutPackage } from "./types";
@@ -8,10 +8,10 @@ import type { CheckoutPackage } from "./types";
 interface OrderSummaryCardProps {
   pkg: CheckoutPackage;
   date: string | null;
-  breakdown: PriceBreakdown;
+  quote: PriceQuote;
 }
 
-export function OrderSummaryCard({ pkg, date, breakdown }: OrderSummaryCardProps) {
+export function OrderSummaryCard({ pkg, date, quote }: OrderSummaryCardProps) {
   return (
     <div className="overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-black/5">
       <div className="flex gap-4 border-b border-border p-5">
@@ -34,11 +34,11 @@ export function OrderSummaryCard({ pkg, date, breakdown }: OrderSummaryCardProps
         </p>
         <p className="flex items-center gap-2.5 text-ink">
           <Users className="size-4 text-pine-600" aria-hidden="true" />
-          {breakdown.participants} {breakdown.participants === 1 ? "traveller" : "travellers"}
+          {quote.travellers} {quote.travellers === 1 ? "traveller" : "travellers"}
         </p>
       </div>
       <div className="space-y-5 p-5">
-        <BookingSummary breakdown={breakdown} />
+        <BookingSummary quote={quote} showOption={pkg.pricing.priceOptions.length > 1} />
       </div>
     </div>
   );

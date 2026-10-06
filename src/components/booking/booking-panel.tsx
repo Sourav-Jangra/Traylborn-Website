@@ -5,8 +5,8 @@ import { ArrowRight } from "lucide-react";
 import { useBooking } from "./booking-context";
 import { DateSelector } from "./date-selector";
 import { ParticipantSelector } from "./participant-selector";
+import { PriceOptionSelector } from "./price-option-selector";
 import { WhatsappIcon } from "@/components/brand/social-icons";
-import { calculatePrice } from "@/lib/utils/pricing";
 import { formatDate, formatPrice } from "@/lib/utils/format";
 import { whatsappLink } from "@/lib/config/site";
 import { cn } from "@/lib/utils";
@@ -23,8 +23,8 @@ interface BookingPanelProps {
  * is sticky so the CTA stays visible however tall the calendar gets.
  */
 export function BookingPanel({ onBook, footerClassName = "bg-white", showHeader = true }: BookingPanelProps) {
-  const { pkg, departures, date, setDate, participants, setParticipants, bookHref } = useBooking();
-  const breakdown = calculatePrice(pkg.price, participants);
+  const { pkg, departures, date, setDate, participants, setParticipants, optionId, setOptionId, quote, bookHref } = useBooking();
+  const options = pkg.pricing.priceOptions;
   const discount = pkg.originalPrice ? Math.round((1 - pkg.price / pkg.originalPrice) * 100) : 0;
 
   return (
@@ -60,8 +60,15 @@ export function BookingPanel({ onBook, footerClassName = "bg-white", showHeader 
           />
         </div>
 
+        {options.length > 1 && (
+          <div>
+            <p className="mb-3 text-sm font-semibold text-ink">2. Choose an option</p>
+            <PriceOptionSelector options={options} value={optionId} onChange={setOptionId} />
+          </div>
+        )}
+
         <div>
-          <p className="mb-3 text-sm font-semibold text-ink">2. How many travellers?</p>
+          <p className="mb-3 text-sm font-semibold text-ink">{options.length > 1 ? 3 : 2}. How many travellers?</p>
           <ParticipantSelector value={participants} onChange={setParticipants} />
         </div>
 
@@ -79,12 +86,17 @@ export function BookingPanel({ onBook, footerClassName = "bg-white", showHeader 
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-xs text-muted-foreground">
-              {formatPrice(pkg.price)} × {participants} · {date ? formatDate(date, { year: undefined }) : "No date selected"}
+              {formatPrice(quote.option.price)} × {participants} · {date ? formatDate(date, { year: undefined }) : "No date selected"}
             </p>
             <p className="text-sm font-semibold text-ink">Total</p>
           </div>
-          <p className="font-display text-2xl font-semibold text-ink">{formatPrice(breakdown.total)}</p>
+          <p className="font-display text-2xl font-semibold text-ink">{formatPrice(quote.total)}</p>
         </div>
+        {quote.advance !== null && (
+          <p className="text-xs text-muted-foreground">
+            Or pay an advance of <span className="font-semibold text-ink">{formatPrice(quote.advance)}</span> now and the rest later.
+          </p>
+        )}
         {date ? (
           <Link
             href={bookHref}

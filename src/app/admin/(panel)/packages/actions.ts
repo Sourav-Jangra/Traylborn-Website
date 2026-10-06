@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import type { EditablePackage } from "@/components/admin/package-editor";
-import type { DepartureRule, ItineraryDay, PackageImage, PackageStatus } from "@/lib/types";
+import type { AdvancePayment, DepartureRule, ItineraryDay, PackageImage, PackageStatus, PriceOption } from "@/lib/types";
+import { formatPrice } from "@/lib/utils/format";
+import { startingPrice } from "@/lib/utils/pricing";
 import { requireAdminActor } from "@/server/auth/session";
 import {
   createPackage,
@@ -13,12 +15,15 @@ import {
 } from "@/server/packages";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
+export type SavePackageResult = { ok: true; priceOptions: PriceOption[] } | { ok: false; error: string };
 export type CreateResult = { ok: true; slug: string } | { ok: false; error: string };
 
 const CATEGORIES = ["treks", "road-trips", "retreats"] as const;
 const STATUSES = ["published", "draft", "archived"] as const;
 const DIFFICULTIES = ["Easy", "Moderate", "Challenging"] as const;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_PRICE = 10_000_000;
+const MAX_PRICE_OPTIONS = 20;
 
 class InvalidInput extends Error {}
 
@@ -77,12 +82,50 @@ function departureRule(value: unknown): DepartureRule {
   }
 }
 
+function priceOptions(value: unknown): PriceOption[] {
+  const options = list(value, "Price options", (o, i) => {
+    const r = (o ?? {}) as Record<string, unknown>;
+    const name = `Price option ${i + 1}`;
+    return {
+      ...(r.id == null ? {} : { id: int(r.id, `${name} id`, 1, 2 ** 31) }),
+      label: text(r.label, `${name} name`, 80, true),
+      price: int(r.price, `${name} price`, 1, MAX_PRICE),
+      isDefault: r.isDefault === true,
+    };
+  });
+  if (!options.length) throw new InvalidInput("Add at least one price option");
+  if (options.length > MAX_PRICE_OPTIONS) throw new InvalidInput(`Use at most ${MAX_PRICE_OPTIONS} price options`);
+  const labels = new Set<string>();
+  for (const o of options) {
+    const key = o.label.toLowerCase();
+    if (labels.has(key)) throw new InvalidInput(`Two price options are both named "${o.label}"`);
+    labels.add(key);
+  }
+  if (options.filter((o) => o.isDefault).length !== 1) throw new InvalidInput("Choose exactly one default price option");
+  return options;
+}
+
+function advancePayment(value: unknown, options: PriceOption[]): AdvancePayment {
+  const r = (value ?? {}) as Record<string, unknown>;
+  const enabled = r.enabled === true;
+  const type = oneOf(r.type, ["percent", "fixed"] as const, "Advance type");
+  if (!enabled) return { enabled, type, value: int(r.value ?? 0, "Advance amount", 0, MAX_PRICE) };
+  if (type === "percent") return { enabled, type, value: int(r.value, "Advance percentage", 1, 99) };
+  const amount = int(r.value, "Advance amount per traveller", 1, MAX_PRICE);
+  const lowest = startingPrice(options);
+  if (amount >= lowest) {
+    throw new InvalidInput(`Advance per traveller must be less than the lowest price option (${formatPrice(lowest)})`);
+  }
+  return { enabled, type, value: amount };
+}
+
 function parse(input: EditablePackage): PackageUpdate {
   const durationDays = int(input.durationDays, "Days", 1, 60);
-  const price = int(input.price, "Price", 0, 10_000_000);
-  const originalPrice = input.originalPrice == null ? null : int(input.originalPrice, "Original price", 0, 10_000_000);
-  if (originalPrice !== null && originalPrice <= price) {
-    throw new InvalidInput("Original price must be higher than the price, or left empty");
+  const options = priceOptions(input.priceOptions);
+  const fromPrice = startingPrice(options);
+  const originalPrice = input.originalPrice == null ? null : int(input.originalPrice, "Original price", 0, MAX_PRICE);
+  if (originalPrice !== null && originalPrice <= fromPrice) {
+    throw new InvalidInput("Original price must be higher than the lowest price option, or left empty");
   }
   return {
     title: text(input.title, "Title", 200, true),
@@ -95,7 +138,8 @@ function parse(input: EditablePackage): PackageUpdate {
     startingPoint: text(input.startingPoint, "Starting point", 120, true),
     endingPoint: text(input.endingPoint, "Ending point", 120, true),
     groupSize: text(input.groupSize, "Group size", 60),
-    price,
+    priceOptions: options,
+    advancePayment: advancePayment(input.advancePayment, options),
     originalPrice,
     images: list<PackageImage>(input.images, "Images", (img) => {
       const i = (img ?? {}) as Record<string, unknown>;
@@ -127,7 +171,7 @@ function parse(input: EditablePackage): PackageUpdate {
 
 // Server actions are reachable by direct POST, so each one checks the session itself.
 
-export async function savePackage(slug: string, input: EditablePackage): Promise<SaveResult> {
+export async function savePackage(slug: string, input: EditablePackage): Promise<SavePackageResult> {
   const actor = await requireAdminActor();
   let update: PackageUpdate;
   try {
@@ -138,12 +182,12 @@ export async function savePackage(slug: string, input: EditablePackage): Promise
   }
   if (update.images.length === 0) return { ok: false, error: "Add at least one image" };
 
-  const found = await updatePackage(String(slug), update, actor);
-  if (!found) return { ok: false, error: "This package no longer exists" };
+  const saved = await updatePackage(String(slug), update, actor);
+  if (!saved) return { ok: false, error: "This package no longer exists" };
 
   // Package data appears on the homepage, listings, detail pages and the footer.
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { ok: true, priceOptions: saved };
 }
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -158,7 +202,6 @@ function requireContent(u: PackageUpdate) {
     ] as const
   ).find(([, v]) => !v);
   if (missing) throw new InvalidInput(`${missing[0]} is required`);
-  if (u.price < 1) throw new InvalidInput("Price is required");
   if (!u.highlights.length) throw new InvalidInput("Add at least one highlight");
   if (!u.inclusions.length) throw new InvalidInput("Add at least one inclusion");
   if (!u.exclusions.length) throw new InvalidInput("Add at least one exclusion");

@@ -17,6 +17,7 @@ export default async function AdminPackagesPage() {
     category: p.category,
     region: p.region,
     price: p.price,
+    priceOptionCount: p.priceOptions.length,
     durationDays: p.durationDays,
     nights: p.nights,
     departureLabel: p.departureLabel,

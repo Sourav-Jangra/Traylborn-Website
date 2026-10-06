@@ -3,6 +3,7 @@ import { cache } from "react";
 import { connection } from "next/server";
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import type {
+  AdvancePayment,
   Category,
   DepartureRule,
   Difficulty,
@@ -10,10 +11,12 @@ import type {
   ItineraryDay,
   PackageImage,
   PackageStatus,
+  PriceOption,
   Season,
   TravelPackage,
 } from "@/lib/types";
 import { describeDepartures } from "@/lib/utils/departures";
+import { startingPrice } from "@/lib/utils/pricing";
 import { recordAudit, diff, type Actor } from "./audit";
 import { db, parseJson, withTransaction } from "./db";
 
@@ -31,8 +34,12 @@ interface PackageRow extends RowDataPacket {
   ending_point: string;
   duration_days: number;
   nights: number;
+  /** Denormalised lowest option price; written by this module, never read. */
   price: number;
   original_price: number | null;
+  advance_enabled: number;
+  advance_type: AdvancePayment["type"];
+  advance_value: number;
   difficulty: Difficulty;
   max_altitude: string | null;
   distance: string | null;
@@ -55,8 +62,24 @@ interface PackageRow extends RowDataPacket {
   departure_rule: string;
 }
 
-function toPackage(row: PackageRow): TravelPackage {
+interface PriceOptionRow extends RowDataPacket {
+  id: number;
+  package_id: number;
+  label: string;
+  price: number;
+  is_default: number;
+}
+
+const OPTION_COLUMNS = "id, package_id, label, price, is_default";
+const OPTION_ORDER = "ORDER BY sort_order, id";
+
+function toPriceOption(row: PriceOptionRow): PriceOption {
+  return { id: row.id, label: row.label, price: row.price, isDefault: Boolean(row.is_default) };
+}
+
+function toPackage(row: PackageRow, optionRows: PriceOptionRow[]): TravelPackage {
   const departureRule = parseJson<DepartureRule>(row.departure_rule);
+  const priceOptions = optionRows.map(toPriceOption);
   return {
     id: String(row.id),
     slug: row.slug,
@@ -70,8 +93,15 @@ function toPackage(row: PackageRow): TravelPackage {
     endingPoint: row.ending_point,
     durationDays: row.duration_days,
     nights: row.nights,
-    price: row.price,
+    // A package without options can't be priced; public queries leave such packages out.
+    price: priceOptions.length ? startingPrice(priceOptions) : 0,
     originalPrice: row.original_price ?? undefined,
+    priceOptions,
+    advancePayment: {
+      enabled: Boolean(row.advance_enabled),
+      type: row.advance_type,
+      value: row.advance_value,
+    },
     // Reviews are not stored yet; the UI hides ratings when the count is 0.
     rating: 0,
     reviewCount: 0,
@@ -108,14 +138,21 @@ function toPackage(row: PackageRow): TravelPackage {
 async function query(sql: string, params: unknown[] = []) {
   await connection();
   const [rows] = await db.query<PackageRow[]>(sql, params);
-  return rows.map(toPackage);
+  if (!rows.length) return [];
+  const [options] = await db.query<PriceOptionRow[]>(
+    `SELECT ${OPTION_COLUMNS} FROM package_price_options WHERE package_id IN (?) ${OPTION_ORDER}`,
+    [rows.map((r) => r.id)],
+  );
+  return rows.map((row) => toPackage(row, options.filter((o) => o.package_id === row.id)));
 }
 
 /** Every package regardless of status — admin only. */
 export const getAllPackages = cache(() => query("SELECT * FROM packages ORDER BY featured DESC, title"));
 
-export const getPublishedPackages = cache(() =>
-  query("SELECT * FROM packages WHERE status = 'published' ORDER BY featured DESC, title"),
+export const getPublishedPackages = cache(async () =>
+  (await query("SELECT * FROM packages WHERE status = 'published' ORDER BY featured DESC, title")).filter(
+    (p) => p.priceOptions.length > 0,
+  ),
 );
 
 export async function getPackageBySlug(slug: string) {
@@ -152,7 +189,8 @@ export interface PackageUpdate {
   startingPoint: string;
   endingPoint: string;
   groupSize: string;
-  price: number;
+  priceOptions: PriceOption[];
+  advancePayment: AdvancePayment;
   originalPrice: number | null;
   images: PackageImage[];
   description: string;
@@ -167,8 +205,8 @@ export interface PackageUpdate {
 }
 
 /** The admin-editable fields of a stored package, in PackageUpdate shape, for audit entries. */
-function editableFields(row: PackageRow): PackageUpdate {
-  const p = toPackage(row);
+function editableFields(row: PackageRow, optionRows: PriceOptionRow[]): PackageUpdate {
+  const p = toPackage(row, optionRows);
   return {
     title: p.title,
     tagline: p.tagline,
@@ -180,7 +218,8 @@ function editableFields(row: PackageRow): PackageUpdate {
     startingPoint: p.startingPoint,
     endingPoint: p.endingPoint,
     groupSize: p.groupSize,
-    price: p.price,
+    priceOptions: p.priceOptions,
+    advancePayment: p.advancePayment,
     originalPrice: p.originalPrice ?? null,
     images: p.images,
     description: p.description,
@@ -200,6 +239,48 @@ async function lockPackage(conn: PoolConnection, slug: string) {
   return rows[0];
 }
 
+async function lockPriceOptions(conn: PoolConnection, packageId: number) {
+  const [rows] = await conn.query<PriceOptionRow[]>(
+    `SELECT ${OPTION_COLUMNS} FROM package_price_options WHERE package_id = ? ${OPTION_ORDER} FOR UPDATE`,
+    [packageId],
+  );
+  return rows;
+}
+
+/**
+ * Makes the package's stored options match `options` (in order), keeping the ids of
+ * options that still exist. Ids that don't belong to this package are treated as new.
+ */
+async function writePriceOptions(conn: PoolConnection, packageId: number, options: PriceOption[], existing: PriceOptionRow[]) {
+  const existingIds = new Set(existing.map((o) => o.id));
+  const keptIds = new Set(options.flatMap((o) => (o.id !== undefined && existingIds.has(o.id) ? [o.id] : [])));
+  const removed = existing.filter((o) => !keptIds.has(o.id)).map((o) => o.id);
+  if (removed.length) await conn.query("DELETE FROM package_price_options WHERE id IN (?)", [removed]);
+  // Park kept labels first so renames that swap labels can't collide on the unique key.
+  if (keptIds.size) {
+    await conn.query("UPDATE package_price_options SET label = CONCAT('#', id) WHERE id IN (?)", [[...keptIds]]);
+  }
+  for (const [i, o] of options.entries()) {
+    if (o.id !== undefined && keptIds.has(o.id)) {
+      await conn.execute(
+        "UPDATE package_price_options SET label = ?, price = ?, is_default = ?, sort_order = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?",
+        [o.label, o.price, o.isDefault ? 1 : 0, i, o.id],
+      );
+    } else {
+      await conn.execute(
+        `INSERT INTO package_price_options (package_id, label, price, is_default, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
+        [packageId, o.label, o.price, o.isDefault ? 1 : 0, i],
+      );
+    }
+  }
+  const [rows] = await conn.query<PriceOptionRow[]>(
+    `SELECT ${OPTION_COLUMNS} FROM package_price_options WHERE package_id = ? ${OPTION_ORDER}`,
+    [packageId],
+  );
+  return rows.map(toPriceOption);
+}
+
 /** Returns false when the slug is already taken. */
 export async function createPackage(slug: string, u: PackageUpdate, actor: Actor) {
   try {
@@ -208,11 +289,11 @@ export async function createPackage(slug: string, u: PackageUpdate, actor: Actor
         `INSERT INTO packages (
            slug, title, tagline, category, region, duration_days, nights,
            difficulty, starting_point, ending_point, group_size,
-           price, original_price, images, description, highlights,
-           inclusions, exclusions, itinerary,
+           price, original_price, advance_enabled, advance_type, advance_value,
+           images, description, highlights, inclusions, exclusions, itinerary,
            departure_rule, featured, status, badge,
            faqs, best_season, tags
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', '[]', '[]')`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', '[]', '[]')`,
         [
           slug,
           u.title,
@@ -225,8 +306,11 @@ export async function createPackage(slug: string, u: PackageUpdate, actor: Actor
           u.startingPoint,
           u.endingPoint,
           u.groupSize,
-          u.price,
+          startingPrice(u.priceOptions),
           u.originalPrice,
+          u.advancePayment.enabled ? 1 : 0,
+          u.advancePayment.type,
+          u.advancePayment.value,
           JSON.stringify(u.images),
           u.description,
           JSON.stringify(u.highlights),
@@ -239,9 +323,15 @@ export async function createPackage(slug: string, u: PackageUpdate, actor: Actor
           u.badge,
         ],
       );
+      const priceOptions = await writePriceOptions(conn, result.insertId, u.priceOptions, []);
       await recordAudit(
         actor,
-        { action: "package.create", entityType: "package", entityId: slug, after: { id: result.insertId, slug, ...u } },
+        {
+          action: "package.create",
+          entityType: "package",
+          entityId: slug,
+          after: { id: result.insertId, slug, ...u, priceOptions },
+        },
         conn,
       );
     });
@@ -290,19 +380,20 @@ export async function setPackageFeatured(slug: string, featured: boolean, actor:
   });
 }
 
-/** Returns false when no package has this slug. */
-export async function updatePackage(slug: string, u: PackageUpdate, actor: Actor) {
+/** Returns the saved price options (with ids), or false when no package has this slug. */
+export async function updatePackage(slug: string, u: PackageUpdate, actor: Actor): Promise<PriceOption[] | false> {
   return withTransaction(async (conn) => {
     const row = await lockPackage(conn, slug);
     if (!row) return false;
-    const changes = diff({ ...editableFields(row) }, { ...u });
-    if (!changes.changed) return true;
+    const optionRows = await lockPriceOptions(conn, row.id);
+    const changes = diff({ ...editableFields(row, optionRows) }, { ...u });
+    if (!changes.changed) return optionRows.map(toPriceOption);
     await conn.execute(
       `UPDATE packages SET
          title = ?, tagline = ?, category = ?, region = ?, duration_days = ?, nights = ?,
          difficulty = ?, starting_point = ?, ending_point = ?, group_size = ?,
-         price = ?, original_price = ?, images = ?, description = ?, highlights = ?,
-         inclusions = ?, exclusions = ?, itinerary = ?,
+         price = ?, original_price = ?, advance_enabled = ?, advance_type = ?, advance_value = ?,
+         images = ?, description = ?, highlights = ?, inclusions = ?, exclusions = ?, itinerary = ?,
          departure_rule = ?, featured = ?, status = ?, badge = ?
        WHERE id = ?`,
       [
@@ -316,8 +407,11 @@ export async function updatePackage(slug: string, u: PackageUpdate, actor: Actor
         u.startingPoint,
         u.endingPoint,
         u.groupSize,
-        u.price,
+        startingPrice(u.priceOptions),
         u.originalPrice,
+        u.advancePayment.enabled ? 1 : 0,
+        u.advancePayment.type,
+        u.advancePayment.value,
         JSON.stringify(u.images),
         u.description,
         JSON.stringify(u.highlights),
@@ -331,11 +425,20 @@ export async function updatePackage(slug: string, u: PackageUpdate, actor: Actor
         row.id,
       ],
     );
+    const priceOptions = "priceOptions" in changes.after
+      ? await writePriceOptions(conn, row.id, u.priceOptions, optionRows)
+      : optionRows.map(toPriceOption);
     await recordAudit(
       actor,
-      { action: "package.update", entityType: "package", entityId: slug, before: changes.before, after: changes.after },
+      {
+        action: "package.update",
+        entityType: "package",
+        entityId: slug,
+        before: changes.before,
+        after: "priceOptions" in changes.after ? { ...changes.after, priceOptions } : changes.after,
+      },
       conn,
     );
-    return true;
+    return priceOptions;
   });
 }

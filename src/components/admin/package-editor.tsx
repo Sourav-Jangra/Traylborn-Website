@@ -7,13 +7,14 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { AlertCircle, ArrowDown, ArrowLeft, ArrowUp, Check, Eye, EyeOff, ImagePlus, Loader2, Plus, Star, Trash2, X } from "lucide-react";
 import { createPackageAction, savePackage } from "@/app/admin/(panel)/packages/actions";
-import type { Category, DepartureRule, Difficulty, ItineraryDay, PackageImage, PackageStatus } from "@/lib/types";
+import type { AdvancePayment, Category, DepartureRule, Difficulty, ItineraryDay, PackageImage, PackageStatus, PriceOption } from "@/lib/types";
 import { m } from "@/components/ui/motion";
 import { Switch } from "@/components/ui/switch";
 import { categories } from "@/lib/config/categories";
 import { describeDepartures, getDepartures } from "@/lib/utils/departures";
 import { difficultyOptions } from "@/lib/utils/filters";
 import { formatDate, formatPrice } from "@/lib/utils/format";
+import { advanceAmount, describeAdvance } from "@/lib/utils/pricing";
 import { adminButton } from "./admin-ui";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,8 @@ export interface EditablePackage {
   startingPoint: string;
   endingPoint: string;
   groupSize: string;
-  price: number;
+  priceOptions: PriceOption[];
+  advancePayment: AdvancePayment;
   originalPrice?: number;
   images: PackageImage[];
   description: string;
@@ -127,7 +129,19 @@ export function PackageEditor({ initial, isNew }: { initial: EditablePackage; is
   const setRule = (r: DepartureRule) => set("departureRule", r);
   const preview = useMemo(() => getDepartures({ departureRule: rule }, 8), [rule]);
   const departureLabel = useMemo(() => describeDepartures(rule), [rule]);
-  const discount = pkg.originalPrice && pkg.originalPrice > pkg.price ? Math.round((1 - pkg.price / pkg.originalPrice) * 100) : 0;
+  const options = pkg.priceOptions;
+  const pricedOptions = options.filter((o) => o.price > 0);
+  const fromPrice = pricedOptions.length ? Math.min(...pricedOptions.map((o) => o.price)) : 0;
+  const discount = pkg.originalPrice && fromPrice && pkg.originalPrice > fromPrice ? Math.round((1 - fromPrice / pkg.originalPrice) * 100) : 0;
+  const advance = pkg.advancePayment;
+  const setAdvance = (patch: Partial<AdvancePayment>) => set("advancePayment", { ...advance, ...patch });
+  const updateOption = (i: number, patch: Partial<PriceOption>) =>
+    set("priceOptions", options.map((o, j) => (j === i ? { ...o, ...patch } : o)));
+  const makeDefault = (i: number) => set("priceOptions", options.map((o, j) => ({ ...o, isDefault: j === i })));
+  const removeOption = (i: number) => {
+    const rest = options.filter((_, j) => j !== i);
+    set("priceOptions", options[i].isDefault ? rest.map((o, j) => ({ ...o, isDefault: j === 0 })) : rest);
+  };
 
   const changeRuleType = (type: DepartureRule["type"]) => {
     if (type === rule.type) return;
@@ -166,7 +180,10 @@ export function PackageEditor({ initial, isNew }: { initial: EditablePackage; is
       }
       try {
         const result = await savePackage(initial.slug, pkg);
-        if (result.ok) setSavedStatus(pkg.status);
+        if (result.ok) {
+          setSavedStatus(pkg.status);
+          set("priceOptions", result.priceOptions);
+        }
         showNotice(result.ok, result.ok ? "Saved" : result.error);
       } catch {
         showNotice(false, "Couldn't save — please try again");
@@ -260,19 +277,140 @@ export function PackageEditor({ initial, isNew }: { initial: EditablePackage; is
             </div>
           </Card>
 
-          <Card title="Pricing" description="Price per person.">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Field label="Price (₹)">
-                <input type="number" min={0} className={inputClass} value={pkg.price} onChange={(e) => set("price", Number(e.target.value))} />
-              </Field>
-              <Field label="Original price (₹)" hint="Optional — shows as struck-through">
+          <Card
+            title="Pricing"
+            description="Prices are per traveller. Customers pick one option for their whole booking."
+            action={
+              <button
+                type="button"
+                onClick={() => set("priceOptions", [...options, { label: "", price: 0, isDefault: options.length === 0 }])}
+                className={adminButton.secondary}
+              >
+                <Plus className="size-4" /> Add option
+              </button>
+            }
+          >
+            <div role="radiogroup" aria-label="Default price option" className="space-y-2">
+              <div className="hidden grid-cols-[4.5rem_minmax(0,1fr)_9rem_2.75rem] gap-2 px-1 text-xs font-semibold text-muted-foreground sm:grid">
+                <span>Default</span><span>Option name</span><span>Price (₹)</span><span />
+              </div>
+              {options.map((o, i) => (
+                <div key={o.id ?? `new-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_2.75rem] items-center gap-2 rounded-xl border border-border p-2 sm:grid-cols-[4.5rem_minmax(0,1fr)_9rem_2.75rem] sm:border-0 sm:p-0">
+                  <label className="flex items-center gap-2 px-1 text-xs font-medium sm:justify-center">
+                    <input type="radio" name="default-price-option" checked={o.isDefault} onChange={() => makeDefault(i)} className="size-4 accent-pine-700" />
+                    <span className="sm:sr-only">Default</span>
+                  </label>
+                  <input
+                    className={cn(inputClass, "col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto")}
+                    value={o.label}
+                    onChange={(e) => updateOption(i, { label: e.target.value })}
+                    placeholder={options.length > 1 ? "e.g. From Dehradun, Double sharing" : "e.g. Standard"}
+                    aria-label={`Price option ${i + 1} name`}
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    className={cn(inputClass, "col-span-2 row-start-3 sm:col-span-1 sm:row-start-auto")}
+                    value={o.price || ""}
+                    onChange={(e) => updateOption(i, { price: Number(e.target.value) })}
+                    aria-label={`Price option ${i + 1} price`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeOption(i)}
+                    disabled={options.length === 1}
+                    className="col-start-3 row-start-1 grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-sand-100 hover:text-destructive disabled:opacity-30 sm:col-start-auto sm:row-start-auto"
+                    aria-label={`Remove price option ${i + 1}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              ))}
+              {options.length === 0 && <p className="text-sm text-destructive">Add at least one price option.</p>}
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Original price (₹)" hint="Optional — shown struck-through next to the lowest option price">
                 <input type="number" min={0} className={inputClass} value={pkg.originalPrice ?? ""} onChange={(e) => set("originalPrice", e.target.value ? Number(e.target.value) : undefined)} />
               </Field>
-              <div className="rounded-xl bg-sand-50 p-4">
-                <p className="text-xs text-muted-foreground">Customer sees</p>
-                <p className="font-display text-2xl font-semibold">{formatPrice(pkg.price || 0)}</p>
-                {discount > 0 && <p className="text-xs font-semibold text-moss-600">{discount}% off {formatPrice(pkg.originalPrice!)}</p>}
+            </div>
+
+            <div className="mt-6 border-t border-border pt-5">
+              <div className="flex items-center justify-between gap-4">
+                <span>
+                  <span className="block text-sm font-medium" id="advance-label">Advance payment</span>
+                  <span className="block text-xs text-muted-foreground">Let customers pay part now and the balance later.</span>
+                </span>
+                <Switch checked={advance.enabled} onCheckedChange={(v) => setAdvance({ enabled: v })} aria-labelledby="advance-label" />
               </div>
+              {advance.enabled && (
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div role="radiogroup" aria-label="Advance type" className="grid grid-cols-2 gap-1 self-end rounded-xl bg-sand-100 p-1">
+                    {([
+                      { id: "percent", label: "Percentage" },
+                      { id: "fixed", label: "Fixed per traveller" },
+                    ] as const).map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={advance.type === t.id}
+                        onClick={() => advance.type !== t.id && setAdvance({ type: t.id, value: 0 })}
+                        className={cn("h-9 rounded-lg text-xs font-semibold transition-colors sm:text-sm", advance.type === t.id ? "bg-white shadow-sm" : "text-ink/60 hover:text-ink")}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Field
+                    label={advance.type === "percent" ? "Advance (% of total)" : "Advance per traveller (₹)"}
+                    hint={advance.type === "percent" ? "1–99" : "Must be less than the lowest option price"}
+                  >
+                    <input
+                      type="number"
+                      min={1}
+                      max={advance.type === "percent" ? 99 : undefined}
+                      className={inputClass}
+                      value={advance.value || ""}
+                      onChange={(e) => setAdvance({ value: Number(e.target.value) })}
+                    />
+                  </Field>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 rounded-xl bg-sand-50 p-4">
+              <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Customer sees</p>
+              <p className="mt-1 font-display text-2xl font-semibold">
+                {options.length > 1 && <span className="mr-1 font-sans text-sm font-normal text-muted-foreground">From</span>}
+                {formatPrice(fromPrice)}
+                <span className="ml-1 font-sans text-sm font-normal text-muted-foreground">/person</span>
+              </p>
+              {discount > 0 && <p className="text-xs font-semibold text-moss-600">{discount}% off {formatPrice(pkg.originalPrice!)}</p>}
+              {pricedOptions.length > 0 && (
+                <table className="mt-3 w-full text-left text-sm">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr><th className="py-1 font-medium">Option</th><th className="py-1 text-right font-medium">Per traveller</th>{advance.enabled && <th className="py-1 text-right font-medium">Advance per traveller</th>}</tr>
+                  </thead>
+                  <tbody>
+                    {pricedOptions.map((o, i) => {
+                      const due = advanceAmount(advance, o, 1);
+                      return (
+                        <tr key={o.id ?? `p-${i}`} className="border-t border-border">
+                          <td className="py-1.5">{o.label || <span className="text-muted-foreground">Unnamed</span>}{o.isDefault && <span className="ml-1.5 text-xs text-muted-foreground">(default)</span>}</td>
+                          <td className="py-1.5 text-right font-medium">{formatPrice(o.price)}</td>
+                          {advance.enabled && (
+                            <td className={cn("py-1.5 text-right", due === null && "text-destructive")}>{due === null ? "Not available" : formatPrice(due)}</td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+              {advance.enabled && describeAdvance(advance) && (
+                <p className="mt-2 text-xs text-muted-foreground">Advance: {describeAdvance(advance)}. The customer chooses full payment or the advance.</p>
+              )}
             </div>
           </Card>
 
@@ -515,7 +653,7 @@ export function PackageEditor({ initial, isNew }: { initial: EditablePackage; is
                 <div className="p-3">
                   <p className="truncate font-display font-semibold">{pkg.title || "Untitled"}</p>
                   <p className="text-xs text-muted-foreground">{pkg.durationDays}D/{pkg.nights}N · {departureLabel}</p>
-                  <p className="mt-1 font-semibold">{formatPrice(pkg.price || 0)}<span className="text-xs font-normal text-muted-foreground"> /person</span></p>
+                  <p className="mt-1 font-semibold">{options.length > 1 && <span className="text-xs font-normal text-muted-foreground">From </span>}{formatPrice(fromPrice)}<span className="text-xs font-normal text-muted-foreground"> /person</span></p>
                 </div>
               </div>
             </div>

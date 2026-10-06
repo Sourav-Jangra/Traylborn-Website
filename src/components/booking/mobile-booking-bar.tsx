@@ -20,6 +20,7 @@ export function MobileBookingBar() {
         <div className="container-page flex items-center gap-3 py-3">
           <div className="min-w-0 flex-1">
             <p className="font-display text-xl leading-tight font-semibold text-ink">
+              {pkg.pricing.priceOptions.length > 1 && <span className="mr-1 font-sans text-xs font-normal text-muted-foreground">From</span>}
               {formatPrice(pkg.price)}
               <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">/person</span>
             </p>

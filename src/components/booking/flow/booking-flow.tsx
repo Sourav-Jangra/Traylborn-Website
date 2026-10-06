@@ -6,11 +6,12 @@ import { AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { m, EASE } from "@/components/ui/motion";
 import type { Departure } from "@/lib/utils/departures";
-import { calculatePrice } from "@/lib/utils/pricing";
+import { quotePrice, type PaymentPlan } from "@/lib/utils/pricing";
 import { formatPrice } from "@/lib/utils/format";
 import { WhatsappIcon } from "@/components/brand/social-icons";
 import { DateSelector } from "../date-selector";
 import { ParticipantSelector } from "../participant-selector";
+import { PriceOptionSelector } from "../price-option-selector";
 import { Stepper } from "./stepper";
 import { OrderSummaryCard } from "./order-summary-card";
 import { TravellerStep, validateDetails, type DetailErrors } from "./traveller-step";
@@ -22,6 +23,7 @@ interface BookingFlowProps {
   departures: Departure[];
   initialDate: string | null;
   initialParticipants: number;
+  initialOptionId: number;
 }
 
 const stepTitles = [
@@ -30,17 +32,26 @@ const stepTitles = [
   { title: "Review your trip", sub: "Check everything looks right, then send it to our team." },
 ];
 
-export function BookingFlow({ pkg, departures, initialDate, initialParticipants }: BookingFlowProps) {
+export function BookingFlow({ pkg, departures, initialDate, initialParticipants, initialOptionId }: BookingFlowProps) {
   const [step, setStep] = useState(initialDate ? 1 : 0);
   const [date, setDate] = useState<string | null>(initialDate);
   const [participants, setParticipants] = useState(initialParticipants);
+  const [optionId, setOptionId] = useState(initialOptionId);
+  const [plan, setPlan] = useState<PaymentPlan>("full");
   const [details, setDetails] = useState<TravellerDetails>(emptyDetails);
   const [errors, setErrors] = useState<DetailErrors>({});
   const [dateError, setDateError] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
 
-  const breakdown = useMemo(() => calculatePrice(pkg.price, participants), [pkg.price, participants]);
+  const options = pkg.pricing.priceOptions;
+  const quote = useMemo(() => {
+    const full = quotePrice(pkg.pricing, { optionId, travellers: participants });
+    // Switching option or travellers can make the advance unavailable; fall back to full.
+    return plan === "advance" && full.advance !== null
+      ? quotePrice(pkg.pricing, { optionId, travellers: participants, plan })
+      : full;
+  }, [pkg.pricing, optionId, participants, plan]);
 
   useEffect(() => {
     if (firstRender.current) {
@@ -119,6 +130,12 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
                         <p role="alert" className="mt-3 text-sm text-destructive">Please choose a departure date to continue.</p>
                       )}
                     </div>
+                    {options.length > 1 && (
+                      <div>
+                        <p className="mb-3 font-semibold text-ink">Choose an option</p>
+                        <PriceOptionSelector options={options} value={optionId} onChange={setOptionId} />
+                      </div>
+                    )}
                     <ParticipantSelector value={participants} onChange={setParticipants} />
                   </div>
                 )}
@@ -138,7 +155,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
                   />
                 )}
                 {step === 2 && date && (
-                  <ReviewStep pkg={pkg} date={date} details={details} breakdown={breakdown} onEdit={setStep} />
+                  <ReviewStep pkg={pkg} date={date} details={details} quote={quote} onPlanChange={setPlan} onEdit={setStep} />
                 )}
               </m.div>
             </AnimatePresence>
@@ -146,7 +163,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
             {step < 2 && (
               <div className="mt-10 hidden items-center justify-between gap-4 border-t border-border pt-6 lg:flex">
                 <p className="text-sm text-muted-foreground">
-                  Total <span className="font-display text-xl font-semibold text-ink">{formatPrice(breakdown.total)}</span>
+                  Total <span className="font-display text-xl font-semibold text-ink">{formatPrice(quote.total)}</span>
                 </p>
                 <button
                   type="button"
@@ -160,7 +177,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
           </div>
 
           <aside aria-label="Order summary" className="lg:sticky lg:top-24 lg:self-start">
-            <OrderSummaryCard pkg={pkg} date={date} breakdown={breakdown} />
+            <OrderSummaryCard pkg={pkg} date={date} quote={quote} />
           </aside>
         </div>
       </div>
@@ -169,13 +186,13 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants 
         <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">
-              {participants} × {formatPrice(pkg.price)}
+              {quote.plan === "advance" ? `Advance now · total ${formatPrice(quote.total)}` : `${participants} × ${formatPrice(quote.option.price)}`}
             </p>
-            <p className="font-display text-xl font-semibold text-ink">{formatPrice(breakdown.total)}</p>
+            <p className="font-display text-xl font-semibold text-ink">{formatPrice(quote.payNow)}</p>
           </div>
           {step === 2 && date ? (
             <a
-              href={bookingWhatsappLink(pkg, date, details, breakdown)}
+              href={bookingWhatsappLink(pkg, date, details, quote)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-[#25D366] px-6 text-sm font-semibold text-white"

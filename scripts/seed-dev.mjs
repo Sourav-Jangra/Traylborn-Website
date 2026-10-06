@@ -1,6 +1,7 @@
 // Inserts the development sample packages from db/seed/dev-packages.json into a LOCAL
 // database. Packages whose slug already exists are skipped, never overwritten, so admin
-// edits survive re-runs. Run `npm run db:migrate` first.
+// edits survive re-runs. Each inserted package gets one default
+// "Standard" price option. Run `npm run db:migrate` first.
 // Usage: npm run db:seed
 import { readFile } from "node:fs/promises";
 import { connect, requireDatabaseEnv } from "./lib/db.mjs";
@@ -39,6 +40,13 @@ try {
         JSON.stringify(p.bestSeason), JSON.stringify(p.tags), JSON.stringify(p.departureRule),
       ],
     );
+    if (result.affectedRows) {
+      await conn.execute(
+        `INSERT INTO package_price_options (package_id, label, price, is_default, sort_order, created_at, updated_at)
+         VALUES (?, 'Standard', ?, 1, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
+        [result.insertId, p.price],
+      );
+    }
     inserted += result.affectedRows;
   }
   console.log(`packages: ${inserted} inserted, ${packages.length - inserted} already present (left unchanged)`);

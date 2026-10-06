@@ -37,6 +37,22 @@ export interface PackageImage {
   alt: string;
 }
 
+/** A bookable price for a package, e.g. "Joshimath" ₹6,999 or "Triple sharing" ₹6,500. Per traveller. */
+export interface PriceOption {
+  /** Absent only for options not yet saved in the admin editor. */
+  id?: number;
+  label: string;
+  price: number;
+  isDefault: boolean;
+}
+
+/** `value` is a whole percentage of the total for "percent", or INR per traveller for "fixed". */
+export interface AdvancePayment {
+  enabled: boolean;
+  type: "percent" | "fixed";
+  value: number;
+}
+
 export interface TravelPackage {
   id: string;
   slug: string;
@@ -50,8 +66,13 @@ export interface TravelPackage {
   endingPoint: string;
   durationDays: number;
   nights: number;
+  /** Lowest option price, derived from priceOptions (see startingPrice in utils/pricing). */
   price: number;
+  /** Struck-through comparison for `price`. */
   originalPrice?: number;
+  /** Ordered for display; exactly one is the default. */
+  priceOptions: PriceOption[];
+  advancePayment: AdvancePayment;
   rating: number;
   reviewCount: number;
   difficulty: Difficulty;

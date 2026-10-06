@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# client production data (SQL dumps, transcripts) — never commit
+/$-Extra-Files/
+/$- Call Transcript
+
 # vercel
 .vercel
 

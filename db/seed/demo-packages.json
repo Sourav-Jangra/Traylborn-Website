@@ -1,0 +1,554 @@
+[
+  {
+    "slug": "hampta-pass-chandratal",
+    "title": "Hampta Pass with Chandratal",
+    "tagline": "Cross from green Kullu into the stark desert of Lahaul",
+    "category": "treks",
+    "region": "Kullu & Lahaul",
+    "state": "Himachal Pradesh",
+    "destination": "Manali, Himachal Pradesh",
+    "startingPoint": "Manali",
+    "endingPoint": "Manali",
+    "durationDays": 5,
+    "nights": 4,
+    "price": 6000,
+    "difficulty": "Moderate",
+    "maxAltitude": "14,100 ft",
+    "distance": "26 km",
+    "bestSeason": [
+      "Summer",
+      "Autumn"
+    ],
+    "groupSize": "",
+    "ageLimit": "",
+    "images": [
+      {
+        "src": "/images/treks/hampta-meadow-trekkers.jpg",
+        "alt": "Trekkers walking through the green meadows of Hampta valley"
+      },
+      {
+        "src": "/images/treks/alpine-lake.jpg",
+        "alt": "The crescent-shaped Chandratal lake beneath snow peaks"
+      },
+      {
+        "src": "/images/treks/solo-trekker-peaks.jpg",
+        "alt": "A trekker standing on a rocky ridge facing snow-capped peaks"
+      },
+      {
+        "src": "/images/treks/snow-valley.jpg",
+        "alt": "Snow-covered valley with a frozen stream"
+      },
+      {
+        "src": "/images/gallery/misty-tents.jpg",
+        "alt": "Tents pitched at a misty alpine campsite"
+      }
+    ],
+    "description": "Hampta Pass is one of the most dramatic crossover treks in India. In just a few days you walk from the lush, pine-forested valleys of Kullu over a 14,100 ft pass and descend into the barren, moon-like landscape of Lahaul. We finish with a drive to Chandratal — the ‘Moon Lake’ — whose colours shift from turquoise to deep blue through the day. It's the perfect first high-altitude trek: challenging enough to feel earned, gentle enough for fit beginners.",
+    "highlights": [
+      "Dramatic crossover from green Kullu to desert Lahaul",
+      "Camp beside the Rani Nallah under a sky full of stars",
+      "Sunset at the crescent-shaped Chandratal lake",
+      "River crossings and glacier views at Shea Goru",
+      "Ideal first high-altitude trek for fit beginners"
+    ],
+    "itinerary": [
+      {
+        "day": 1,
+        "title": "Manali to Jobra, trek to Chika",
+        "description": "Drive from Manali to Jobra through 40+ hairpin bends. A gentle 2-hour walk through maple and pine forests brings you to our riverside camp at Chika.",
+        "altitude": "10,100 ft",
+        "distance": "3 km trek",
+        "stay": "Alpine tents",
+        "meals": "Lunch, dinner"
+      },
+      {
+        "day": 2,
+        "title": "Chika to Balu ka Ghera",
+        "description": "Walk along the Rani Nallah with the Dhauladhar peaks slowly revealing themselves. Cross the river and reach Balu ka Ghera, a wide sandy campsite beneath the pass.",
+        "altitude": "11,900 ft",
+        "distance": "8 km",
+        "stay": "Alpine tents",
+        "meals": "All meals"
+      },
+      {
+        "day": 3,
+        "title": "Cross Hampta Pass to Shea Goru",
+        "description": "The big day. A steady climb brings you to the top of Hampta Pass for sweeping views of Lahaul's Indrasan and Deo Tibba. Descend steeply to Shea Goru.",
+        "altitude": "14,100 ft",
+        "distance": "10 km",
+        "stay": "Alpine tents",
+        "meals": "All meals"
+      },
+      {
+        "day": 4,
+        "title": "Shea Goru to Chatru, drive to Chandratal",
+        "description": "A short walk to Chatru, then drive along the Chandra river to Chandratal. Spend the evening by the lake as the colours change with the light.",
+        "altitude": "14,100 ft",
+        "distance": "5 km + drive",
+        "stay": "Alpine tents",
+        "meals": "All meals"
+      },
+      {
+        "day": 5,
+        "title": "Chandratal to Manali",
+        "description": "Sunrise at the lake, then drive back to Manali.",
+        "distance": "Drive",
+        "meals": "Breakfast, lunch"
+      }
+    ],
+    "inclusions": [
+      "Alpine tents on a triple-sharing basis",
+      "Meals from Day 1 lunch to Day 5 breakfast",
+      "Sleeping bags",
+      "First-aid kit and emergency oxygen cylinder",
+      "Transfers as mentioned in the itinerary"
+    ],
+    "exclusions": [
+      "Personal expenses and tips",
+      "Offloading of personal backpack (available at extra cost)",
+      "Travel insurance",
+      "Anything not mentioned in the inclusions",
+      "Costs arising from weather delays, landslides or roadblocks"
+    ],
+    "thingsToCarry": [
+      "40–60L backpack with rain cover",
+      "Trekking shoes with good ankle support",
+      "3 warm layers + down jacket",
+      "Trekking pole, headlamp, sunglasses",
+      "Personal medicines and a reusable water bottle"
+    ],
+    "faqs": [],
+    "departureRule": {
+      "type": "daily",
+      "startDate": "2026-10-15",
+      "endDate": "2026-12-20",
+      "blackoutDates": [
+        "2026-11-08",
+        "2026-11-09"
+      ]
+    },
+    "departureLabel": "Daily from 15 October",
+    "featured": true,
+    "status": "published",
+    "tags": [
+      "manali",
+      "himachal",
+      "beginner",
+      "crossover",
+      "chandratal",
+      "lake",
+      "trek"
+    ]
+  },
+  {
+    "slug": "sar-pass-trek",
+    "title": "Sar Pass Trek",
+    "tagline": "Snow slides, pine forests and the Parvati valley",
+    "category": "treks",
+    "region": "Parvati Valley",
+    "state": "Himachal Pradesh",
+    "destination": "Kasol, Himachal Pradesh",
+    "startingPoint": "Kasol",
+    "endingPoint": "Kasol",
+    "durationDays": 5,
+    "nights": 4,
+    "price": 6500,
+    "difficulty": "Moderate",
+    "maxAltitude": "13,800 ft",
+    "distance": "48 km",
+    "bestSeason": [
+      "Summer"
+    ],
+    "groupSize": "",
+    "ageLimit": "",
+    "images": [
+      {
+        "src": "/images/treks/snow-ridge-trekker.jpg",
+        "alt": "A trekker walking along a snowy ridge towards Sar Pass"
+      },
+      {
+        "src": "/images/treks/snow-peaks-clouds.jpg",
+        "alt": "Snow peaks rising above a sea of clouds"
+      },
+      {
+        "src": "/images/gallery/campfire.jpg",
+        "alt": "Trekkers gathered around a campfire in the forest"
+      },
+      {
+        "src": "/images/treks/snowy-peak.jpg",
+        "alt": "A sharp snowy peak at golden hour"
+      },
+      {
+        "src": "/images/treks/sunset-snow-group.jpg",
+        "alt": "Silhouettes of trekkers on snow at sunset"
+      }
+    ],
+    "description": "Sar Pass begins in the backpacker village of Kasol and climbs through dense pine and oak forests to Grahan village, before opening up onto snowfields with sweeping views of the Parvati valley. The highlight is the famous snow slide on the descent from the pass — a memory every Sar Pass trekker carries home.",
+    "highlights": [
+      "Slide down a natural snow chute from the pass",
+      "Stay in the remote village of Grahan",
+      "Sunrise views from Min Thach and Nagaru",
+      "Walk through rhododendron and pine forests"
+    ],
+    "itinerary": [
+      {
+        "day": 1,
+        "title": "Kasol to Grahan village",
+        "description": "Trek along the Grahan Nallah through thick forest to the ancient village of Grahan.",
+        "altitude": "7,700 ft",
+        "distance": "10 km",
+        "stay": "Alpine tents",
+        "meals": "Lunch, dinner"
+      },
+      {
+        "day": 2,
+        "title": "Grahan to Min Thach",
+        "description": "A steep climb through rhododendron forest opens up to the grassy meadow of Min Thach.",
+        "altitude": "11,150 ft",
+        "distance": "7 km",
+        "stay": "Alpine tents",
+        "meals": "All meals"
+      },
+      {
+        "day": 3,
+        "title": "Min Thach to Nagaru",
+        "description": "Climb onto the snowline to Nagaru, the highest campsite, with 360° views of the Parvati valley.",
+        "altitude": "12,500 ft",
+        "distance": "5 km",
+        "stay": "Alpine tents",
+        "meals": "All meals"
+      },
+      {
+        "day": 4,
+        "title": "Nagaru – Sar Pass – Biskeri Thach",
+        "description": "Early start to cross Sar Pass, followed by the snow slide descent to the meadows of Biskeri.",
+        "altitude": "13,800 ft",
+        "distance": "14 km",
+        "stay": "Alpine tents",
+        "meals": "All meals"
+      },
+      {
+        "day": 5,
+        "title": "Biskeri to Barshaini, drive to Kasol",
+        "description": "Descend via Bandak Thach to Barshaini and drive back to Kasol.",
+        "distance": "12 km + drive",
+        "meals": "Breakfast, lunch"
+      }
+    ],
+    "inclusions": [
+      "Alpine tents on a sharing basis",
+      "Vegetarian meals from Day 1 lunch to Day 5 breakfast",
+      "Forest permits, camping fees and entry charges",
+      "Sleeping bags, mattresses, kitchen and dining tents",
+      "First-aid kit, oximeter and emergency oxygen cylinder"
+    ],
+    "exclusions": [
+      "Personal expenses and tips",
+      "Offloading of personal backpack (available at extra cost)",
+      "Travel insurance",
+      "Anything not mentioned in the inclusions",
+      "Costs arising from weather delays, landslides or roadblocks"
+    ],
+    "thingsToCarry": [
+      "40–60L backpack with rain cover",
+      "Trekking shoes with good ankle support",
+      "3 warm layers + down jacket",
+      "Trekking pole, headlamp, sunglasses",
+      "Personal medicines and a reusable water bottle"
+    ],
+    "faqs": [],
+    "departureRule": {
+      "type": "weekly",
+      "weekdays": [
+        5
+      ],
+      "startDate": "2026-10-02",
+      "endDate": "2027-06-30"
+    },
+    "departureLabel": "Every Friday",
+    "featured": true,
+    "status": "published",
+    "tags": [
+      "kasol",
+      "parvati",
+      "snow",
+      "himachal",
+      "trek"
+    ]
+  },
+  {
+    "slug": "deoriatal-chandrashila",
+    "title": "Deoriatal Chandrashila",
+    "tagline": "A mirror lake, rhododendron forests and a 360° summit",
+    "category": "treks",
+    "region": "Garhwal",
+    "state": "Uttarakhand",
+    "destination": "Chopta, Uttarakhand",
+    "startingPoint": "Delhi",
+    "endingPoint": "Delhi",
+    "durationDays": 5,
+    "nights": 4,
+    "price": 11999,
+    "difficulty": "Easy",
+    "maxAltitude": "13,000 ft",
+    "distance": "30 km",
+    "bestSeason": [
+      "Winter",
+      "Spring",
+      "Autumn"
+    ],
+    "groupSize": "",
+    "ageLimit": "",
+    "images": [
+      {
+        "src": "/images/treks/lake-reflection-peaks.jpg",
+        "alt": "Snow peaks reflected in the still waters of Deoriatal"
+      },
+      {
+        "src": "/images/treks/summit-sunrise.jpg",
+        "alt": "Sunrise over the Garhwal Himalaya from Chandrashila summit"
+      },
+      {
+        "src": "/images/treks/pink-peaks.jpg",
+        "alt": "Himalayan peaks glowing pink at dusk"
+      },
+      {
+        "src": "/images/gallery/tent-view.jpg",
+        "alt": "View of mountains from inside a tent"
+      }
+    ],
+    "description": "This trek combines two of Garhwal's finest experiences: the emerald Deoriatal lake, where Chaukhamba's peaks reflect on still mornings, and the summit of Chandrashila, which offers one of the widest Himalayan panoramas you can reach on foot — Nanda Devi, Trishul, Kedarnath and Chaukhamba all in one frame.",
+    "highlights": [
+      "Chaukhamba reflected in Deoriatal at sunrise",
+      "Summit Chandrashila for a 360° Himalayan panorama",
+      "Visit Tungnath, the highest Shiva temple in the world"
+    ],
+    "itinerary": [
+      {
+        "day": 1,
+        "title": "Delhi to Sari village",
+        "description": "Drive from Delhi to Sari village.",
+        "altitude": "6,500 ft",
+        "stay": "Guesthouse",
+        "meals": "Dinner"
+      },
+      {
+        "day": 2,
+        "title": "Sari to Deoriatal",
+        "description": "A short climb through oak forests to Deoriatal lake. Evening by the water with Chaukhamba views.",
+        "altitude": "7,900 ft",
+        "distance": "3 km",
+        "meals": "All meals"
+      },
+      {
+        "day": 3,
+        "title": "Deoriatal to Chopta",
+        "description": "Ridge walk through rhododendron forests via Rohini Bugyal to Chopta.",
+        "altitude": "9,500 ft",
+        "distance": "14 km",
+        "meals": "All meals"
+      },
+      {
+        "day": 4,
+        "title": "Tungnath & Chandrashila summit",
+        "description": "Pre-dawn start to Tungnath temple and the Chandrashila summit for sunrise. Descend to Chopta.",
+        "altitude": "13,000 ft",
+        "distance": "10 km",
+        "meals": "All meals"
+      },
+      {
+        "day": 5,
+        "title": "Chopta to Delhi",
+        "description": "Drive back to Delhi.",
+        "meals": "Breakfast"
+      }
+    ],
+    "inclusions": [
+      "Accommodation on a sharing basis",
+      "Vegetarian meals (lunch not included)",
+      "First-aid kit, oximeter and emergency oxygen cylinder",
+      "Transfers as mentioned in the itinerary"
+    ],
+    "exclusions": [
+      "Personal expenses and tips",
+      "Travel insurance",
+      "Anything not mentioned in the inclusions",
+      "Costs arising from weather delays, landslides or roadblocks"
+    ],
+    "thingsToCarry": [
+      "40–60L backpack with rain cover",
+      "Trekking shoes with good ankle support",
+      "3 warm layers + down jacket",
+      "Trekking pole, headlamp, sunglasses",
+      "Personal medicines and a reusable water bottle"
+    ],
+    "faqs": [],
+    "departureRule": {
+      "type": "weekly",
+      "weekdays": [
+        4
+      ],
+      "startDate": "2026-10-01",
+      "endDate": "2027-04-30"
+    },
+    "departureLabel": "Every Thursday",
+    "featured": true,
+    "status": "published",
+    "tags": [
+      "chopta",
+      "uttarakhand",
+      "lake",
+      "summit",
+      "delhi",
+      "trek",
+      "beginner"
+    ]
+  },
+  {
+    "slug": "har-ki-dun-trek",
+    "title": "Har Ki Dun Trek",
+    "tagline": "The ‘Valley of Gods’ and its 3,000-year-old villages",
+    "category": "treks",
+    "region": "Govind Pashu Vihar",
+    "state": "Uttarakhand",
+    "destination": "Sankri, Uttarakhand",
+    "startingPoint": "Dehradun",
+    "endingPoint": "Dehradun",
+    "durationDays": 6,
+    "nights": 5,
+    "price": 12500,
+    "difficulty": "Moderate",
+    "maxAltitude": "11,700 ft",
+    "distance": "44 km",
+    "bestSeason": [
+      "Autumn",
+      "Spring",
+      "Summer"
+    ],
+    "groupSize": "",
+    "ageLimit": "",
+    "images": [
+      {
+        "src": "/images/treks/pine-valley.jpg",
+        "alt": "A pine-lined valley leading towards snow-capped peaks"
+      },
+      {
+        "src": "/images/treks/homestay-group.jpg",
+        "alt": "A group of trekkers outside a traditional wooden homestay"
+      },
+      {
+        "src": "/images/treks/misty-valley.jpg",
+        "alt": "Mist rolling through a Himalayan valley"
+      },
+      {
+        "src": "/images/treks/trail-hikers.jpg",
+        "alt": "Hikers on a mountain trail"
+      }
+    ],
+    "description": "Har Ki Dun is a cradle-shaped valley at the foot of Swargarohini, the mythical stairway to heaven. The trail winds through ancient villages with intricately carved wooden houses, dense forests of pine and walnut, and finally opens onto meadows ringed by snow peaks.",
+    "highlights": [
+      "Views of Swargarohini and Black Peak",
+      "Stay in the 3,000-year-old village of Osla",
+      "Old-growth forests and wildflower meadows",
+      "Excellent for photography and culture lovers"
+    ],
+    "itinerary": [
+      {
+        "day": 1,
+        "title": "Dehradun to Sankri",
+        "description": "Scenic 8-hour drive via Mussoorie and Purola to the base village of Sankri.",
+        "altitude": "6,400 ft",
+        "stay": "Guesthouse",
+        "meals": "Dinner"
+      },
+      {
+        "day": 2,
+        "title": "Sankri to Pauni Garaat",
+        "description": "Drive to Taluka and trek along the Supin river to Pauni Garaat.",
+        "altitude": "8,200 ft",
+        "distance": "11 km",
+        "stay": "Camps",
+        "meals": "All meals"
+      },
+      {
+        "day": 3,
+        "title": "Pauni Garaat to Kalkatiyadhar",
+        "description": "Pass through Osla village and climb to the meadow campsite of Kalkatiyadhar.",
+        "altitude": "9,800 ft",
+        "distance": "8 km",
+        "stay": "Camps",
+        "meals": "All meals"
+      },
+      {
+        "day": 4,
+        "title": "Explore Har Ki Dun valley",
+        "description": "Trek to the valley floor with Swargarohini views, explore Maninda Tal and return.",
+        "altitude": "11,700 ft",
+        "distance": "12 km",
+        "stay": "Camps",
+        "meals": "All meals"
+      },
+      {
+        "day": 5,
+        "title": "Kalkatiyadhar to Sankri",
+        "description": "Retrace the trail to Taluka and drive to Sankri.",
+        "distance": "19 km",
+        "stay": "Guesthouse",
+        "meals": "All meals"
+      },
+      {
+        "day": 6,
+        "title": "Sankri to Dehradun",
+        "description": "Drive back to Dehradun.",
+        "meals": "Breakfast"
+      }
+    ],
+    "inclusions": [
+      "Accommodation in homestays and tents (triple sharing)",
+      "Breakfast, lunch and dinner during the trek",
+      "Forest and trekking permits",
+      "Sleeping bags",
+      "First-aid kit and emergency oxygen cylinder",
+      "Transfers as mentioned in the itinerary"
+    ],
+    "exclusions": [
+      "Personal expenses and tips",
+      "Travel insurance",
+      "Anything not mentioned in the inclusions",
+      "Costs arising from weather delays, landslides or roadblocks"
+    ],
+    "thingsToCarry": [
+      "40–60L backpack with rain cover",
+      "Trekking shoes with good ankle support",
+      "3 warm layers + down jacket",
+      "Trekking pole, headlamp, sunglasses",
+      "Personal medicines and a reusable water bottle"
+    ],
+    "faqs": [],
+    "departureRule": {
+      "type": "fixed",
+      "dates": [
+        "2026-10-09",
+        "2026-10-16",
+        "2026-10-23",
+        "2026-10-30",
+        "2026-11-06",
+        "2026-11-13",
+        "2026-11-20",
+        "2027-04-02",
+        "2027-04-16",
+        "2027-05-07"
+      ]
+    },
+    "departureLabel": "Fixed group departures",
+    "featured": true,
+    "status": "published",
+    "tags": [
+      "dehradun",
+      "sankri",
+      "valley",
+      "culture",
+      "trek"
+    ]
+  }
+]

@@ -1,26 +1,175 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-serif: var(--font-instrument), ui-serif, Georgia, serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.4);
+  --radius-4xl: calc(var(--radius) * 3);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Traylborn brand palette */
+@theme {
+  --color-pine-50: #eef6f4;
+  --color-pine-100: #d6ebe6;
+  --color-pine-200: #aed6cd;
+  --color-pine-300: #7dbcae;
+  --color-pine-400: #4a9a8b;
+  --color-pine-500: #2a7c70;
+  --color-pine-600: #1b645b;
+  --color-pine-700: #135450;
+  --color-pine-800: #0f4a49;
+  --color-pine-900: #0b3433;
+  --color-pine-950: #062120;
+
+  --color-sand-50: #fbf9f4;
+  --color-sand-100: #f5f1e7;
+  --color-sand-200: #ebe4d3;
+  --color-sand-300: #dcd1b9;
+  --color-sand-400: #c4b393;
+
+  --color-ember-300: #f8c878;
+  --color-ember-400: #f5b04c;
+  --color-ember-500: #f09a2b;
+  --color-ember-600: #d97f12;
+  --color-ember-700: #a95f0a;
+
+  --color-moss-400: #7fcb91;
+  --color-moss-500: #5fbd74;
+  --color-moss-600: #3f9a55;
+  --color-moss-700: #2c7440;
+
+  --color-ink: #0c1716;
+
+  --animate-ken-burns: ken-burns 24s ease-out both;
+  --animate-marquee: marquee 40s linear infinite;
+
+  @keyframes ken-burns {
+    from {
+      transform: scale(1.12);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  --radius: 0.75rem;
+  --background: #fbf9f4;
+  --foreground: #0c1716;
+  --card: #ffffff;
+  --card-foreground: #0c1716;
+  --popover: #ffffff;
+  --popover-foreground: #0c1716;
+  --primary: #0f4a49;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f1e7;
+  --secondary-foreground: #0c1716;
+  --muted: #f5f1e7;
+  --muted-foreground: #56625f;
+  --accent: #eef6f4;
+  --accent-foreground: #0f4a49;
+  --destructive: #c2410c;
+  --border: #e6dfcf;
+  --input: #ddd5c3;
+  --ring: #1b645b;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-pine-600;
+  }
+  ::selection {
+    @apply bg-ember-300 text-ink;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-[88rem] px-5 sm:px-8 lg:px-12;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[0.7rem] font-semibold tracking-[0.2em] uppercase;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  body:has([data-mobile-booking-bar]) footer {
+    padding-bottom: 5.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

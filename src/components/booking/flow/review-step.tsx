@@ -16,6 +16,7 @@ interface ReviewStepProps {
   onConfirm: () => void;
   pending: boolean;
   error: string | null;
+  couponField: React.ReactNode;
 }
 
 export function ConfirmButton({ onClick, pending, className }: { onClick: () => void; pending: boolean; className?: string }) {
@@ -36,7 +37,7 @@ export function ConfirmButton({ onClick, pending, className }: { onClick: () => 
   );
 }
 
-export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit, onConfirm, pending, error }: ReviewStepProps) {
+export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit, onConfirm, pending, error, couponField }: ReviewStepProps) {
   const showOption = pkg.pricing.priceOptions.length > 1;
   return (
     <div className="space-y-6">
@@ -68,9 +69,17 @@ export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit, on
       <ReviewBlock title="Price" onEdit={() => onEdit(0)}>
         <p className="text-muted-foreground">
           {formatPrice(quote.option.price)} × {quote.travellers} {quote.travellers === 1 ? "traveller" : "travellers"}
+          {quote.discount > 0 && ` = ${formatPrice(quote.subtotal)}`}
         </p>
+        {quote.discount > 0 && quote.appliedDiscount && (
+          <p className="text-pine-700">
+            {quote.appliedDiscount.label}: −{formatPrice(quote.discount)}
+          </p>
+        )}
         <p className="font-display text-xl font-semibold text-ink">{formatPrice(quote.total)}</p>
       </ReviewBlock>
+
+      {couponField}
 
       {quote.advance !== null && (
         <fieldset className="rounded-2xl bg-white p-5 text-sm ring-1 ring-black/5">
@@ -97,11 +106,11 @@ export function ReviewStep({ pkg, date, details, quote, onPlanChange, onEdit, on
 
       <div className="rounded-2xl bg-pine-50 p-5 text-sm ring-1 ring-pine-200">
         <p className="flex items-center gap-2 font-semibold text-pine-800">
-          <Info className="size-4 shrink-0" aria-hidden="true" /> Nothing is charged now
+          <Info className="size-4 shrink-0" aria-hidden="true" /> Next: secure payment
         </p>
         <p className="mt-1.5 text-pine-800/80">
-          Confirming creates your booking with a reference number, awaiting payment. Online payment isn&apos;t
-          available yet, so our team will contact you to arrange it.
+          Confirming creates your booking with a reference number. You&apos;ll then pay {quote.plan === "advance" ? "the advance" : "the full amount"} securely
+          with Razorpay; your place is held for 30 minutes.
         </p>
         {error && (
           <p role="alert" className="mt-4 rounded-xl bg-destructive/8 px-4 py-3 font-medium text-destructive">

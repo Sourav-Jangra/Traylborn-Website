@@ -16,6 +16,7 @@ import { difficultyOptions } from "@/lib/utils/filters";
 import { formatDate, formatPrice } from "@/lib/utils/format";
 import { advanceAmount, describeAdvance } from "@/lib/utils/pricing";
 import { adminButton } from "./admin-ui";
+import { MediaPickerDialog, type MediaOption } from "./media-picker";
 import { cn } from "@/lib/utils";
 
 export interface EditablePackage {
@@ -46,15 +47,6 @@ export interface EditablePackage {
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const libraryImages = [
-  "/images/treks/alpine-lake.jpg",
-  "/images/treks/snow-valley.jpg",
-  "/images/treks/misty-valley.jpg",
-  "/images/gallery/stars-tent.jpg",
-  "/images/road-trips/prayer-flags.jpg",
-  "/images/retreats/cliff-yoga.jpg",
-];
-
 const inputClass = "h-11 w-full rounded-xl border border-border bg-white px-3.5 text-sm outline-none focus:border-pine-600 focus:ring-4 focus:ring-pine-600/10";
 const textareaClass = "w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-pine-600 focus:ring-4 focus:ring-pine-600/10";
 
@@ -114,9 +106,10 @@ function ListEditor({ label, items, onChange, className }: { label: string; item
   );
 }
 
-export function PackageEditor({ initial, isNew }: { initial: EditablePackage; isNew: boolean }) {
+export function PackageEditor({ initial, isNew, media }: { initial: EditablePackage; isNew: boolean; media: MediaOption[] }) {
   const router = useRouter();
   const [pkg, setPkg] = useState(initial);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [savedStatus, setSavedStatus] = useState(initial.status);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, startSaving] = useTransition();
@@ -435,16 +428,21 @@ export function PackageEditor({ initial, isNew }: { initial: EditablePackage; is
               <li>
                 <button
                   type="button"
-                  onClick={() => {
-                    const next = libraryImages.find((src) => !pkg.images.some((i) => i.src === src));
-                    if (next) set("images", [...pkg.images, { src: next, alt: pkg.title }]);
-                  }}
+                  onClick={() => setPickerOpen(true)}
                   className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground hover:border-pine-400 hover:text-pine-700"
                 >
                   <ImagePlus className="size-5" /> Add image
                 </button>
               </li>
             </ul>
+            <MediaPickerDialog
+              open={pickerOpen}
+              onOpenChange={setPickerOpen}
+              media={media}
+              type="image"
+              exclude={pkg.images.map((i) => i.src)}
+              onPick={(item) => set("images", [...pkg.images, { src: item.src, alt: item.alt || pkg.title }])}
+            />
           </Card>
 
           <Card title="Highlights">

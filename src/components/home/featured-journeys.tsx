@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { SectionHeading, Accent } from "@/components/layout/section-heading";
+import { SectionHeading } from "@/components/layout/section-heading";
 import { Carousel, CarouselItem } from "@/components/packages/package-carousel";
 import { PackageCard } from "@/components/packages/package-card";
-import { getFeaturedPackages } from "@/server/packages";
+import { RichTitle } from "@/components/content/rich-title";
+import type { HeadingData } from "@/lib/content/types";
+import type { TravelPackage } from "@/lib/types";
 
-export async function FeaturedJourneys() {
-  const featured = await getFeaturedPackages();
-
+export function FeaturedJourneys({ heading, packages }: { heading: HeadingData; packages: TravelPackage[] }) {
+  if (!packages.length) return null;
   return (
     <section aria-labelledby="featured-heading" className="overflow-hidden py-20 sm:py-28">
       <div className="container-page">
@@ -15,17 +16,17 @@ export async function FeaturedJourneys() {
           label="Featured journeys"
           header={
             <SectionHeading
-              eyebrow="Upcoming departures"
+              eyebrow={heading.eyebrow || undefined}
               title={
                 <span id="featured-heading">
-                  Journeys our travellers <Accent className="text-pine-600">love</Accent>
+                  <RichTitle text={heading.title} accentClassName="text-pine-600" />
                 </span>
               }
-              description="Hand-picked journeys with departures this season."
+              description={heading.description || undefined}
             />
           }
         >
-          {featured.map((pkg) => (
+          {packages.map((pkg) => (
             <CarouselItem key={pkg.id}>
               <PackageCard pkg={pkg} sizes="(min-width: 640px) 352px, 82vw" />
             </CarouselItem>

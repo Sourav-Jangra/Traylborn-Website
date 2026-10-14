@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ExternalLink, LayoutDashboard, LogOut, Menu, Package, Ticket } from "lucide-react";
+import { BadgePercent, ExternalLink, House, Images, LayoutDashboard, LogOut, Menu, Package, Ticket, TicketPercent } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,10 @@ export const adminNav = [
   { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
   { label: "Packages", href: "/admin/packages", Icon: Package },
   { label: "Bookings", href: "/admin/bookings", Icon: Ticket },
+  { label: "Coupons", href: "/admin/coupons", Icon: TicketPercent },
+  { label: "Offers", href: "/admin/offers", Icon: BadgePercent },
+  { label: "Homepage", href: "/admin/content", Icon: House },
+  { label: "Media", href: "/admin/media", Icon: Images },
 ];
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
@@ -104,7 +108,7 @@ export function AdminShell({ admin, children }: { admin: SignedInAdmin; children
         </header>
 
         <div className="border-b border-ember-500/20 bg-ember-500/10 px-4 py-2 text-center text-xs font-medium text-ember-700 sm:px-8">
-          Package changes are saved to the database and go live on the website.
+          Changes you save here go live on the website straight away.
         </div>
         <main id="main" className="px-4 py-6 sm:px-8 sm:py-8 xl:px-10">{children}</main>
       </div>

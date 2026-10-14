@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { cancelBookingAction, saveBookingNotesAction } from "@/app/admin/(panel)/bookings/actions";
+import {
+  cancelBookingAction,
+  reconcileBookingPaymentsAction as reconcilePaymentsAction,
+  saveBookingNotesAction,
+} from "@/app/admin/(panel)/bookings/actions";
 import { adminButton } from "./admin-ui";
 
 const field = "w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-pine-600 focus:ring-4 focus:ring-pine-600/10";
@@ -31,6 +35,35 @@ export function BookingNotesForm({ reference, initialNotes }: { reference: strin
         {message && <p role="status" className={message.ok ? "text-sm text-moss-700" : "text-sm text-destructive"}>{message.text}</p>}
       </div>
     </form>
+  );
+}
+
+export function ReconcilePaymentsButton({ reference }: { reference: string }) {
+  const router = useRouter();
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, startTransition] = useTransition();
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled={pending}
+        className={adminButton.secondary}
+        onClick={() =>
+          startTransition(async () => {
+            const result = await reconcilePaymentsAction(reference);
+            setMessage(
+              result.ok
+                ? { ok: true, text: result.recorded ? `Recorded ${result.recorded} payment(s) from Razorpay` : "No new payments at Razorpay" }
+                : { ok: false, text: result.error },
+            );
+            router.refresh();
+          })
+        }
+      >
+        {pending ? "Checking…" : "Check with Razorpay"}
+      </button>
+      {message && <p role="status" className={message.ok ? "text-sm text-moss-700" : "text-sm text-destructive"}>{message.text}</p>}
+    </div>
   );
 }
 

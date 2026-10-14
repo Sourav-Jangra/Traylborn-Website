@@ -7,6 +7,8 @@ interface HeroMediaProps {
   image: string;
   alt: string;
   video?: string;
+  /** Only the first visible hero image should be preloaded. */
+  priority?: boolean;
 }
 
 /**
@@ -14,7 +16,7 @@ interface HeroMediaProps {
  * A video, if provided, is only attached on wider screens with no data-saver
  * or reduced-motion preference, so mobile visitors from ads never download it.
  */
-export function HeroMedia({ image, alt, video }: HeroMediaProps) {
+export function HeroMedia({ image, alt, video, priority = true }: HeroMediaProps) {
   const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
@@ -36,8 +38,8 @@ export function HeroMedia({ image, alt, video }: HeroMediaProps) {
           src={image}
           alt={alt}
           fill
-          preload
-          fetchPriority="high"
+          preload={priority}
+          fetchPriority={priority ? "high" : "auto"}
           sizes="100vw"
           className="object-cover object-[50%_40%]"
         />

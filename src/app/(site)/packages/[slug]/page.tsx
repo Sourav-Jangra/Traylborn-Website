@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Backpack, Sparkles } from "lucide-react";
+import { getLiveOffers, offersForPackage } from "@/server/discounts";
 import { getPackageBySlug, getRelatedPackages } from "@/server/packages";
 import { whatsappLink } from "@/lib/config/site";
 import { getDepartures, getNextDeparture } from "@/lib/utils/departures";
@@ -40,6 +41,7 @@ export default async function PackagePage({ params }: PageProps<"/packages/[slug
   const departures = getDepartures(pkg, 400);
   const next = getNextDeparture(pkg);
   const related = await getRelatedPackages(pkg);
+  const offers = offersForPackage(await getLiveOffers(), Number(pkg.id));
   const prices = pkg.priceOptions.map((o) => o.price);
   const multiplePrices = pkg.priceOptions.length > 1;
 
@@ -66,7 +68,7 @@ export default async function PackagePage({ params }: PageProps<"/packages/[slug
         title: pkg.title,
         price: pkg.price,
         originalPrice: pkg.originalPrice,
-        pricing: { priceOptions: pkg.priceOptions, advancePayment: pkg.advancePayment },
+        pricing: { priceOptions: pkg.priceOptions, advancePayment: pkg.advancePayment, offers },
         durationDays: pkg.durationDays,
         nights: pkg.nights,
         departureLabel: pkg.departureLabel,

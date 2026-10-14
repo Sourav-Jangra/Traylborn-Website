@@ -1,22 +1,24 @@
-import { SectionHeading, Accent } from "@/components/layout/section-heading";
+import { SectionHeading } from "@/components/layout/section-heading";
 import { CategoryCard } from "@/components/packages/category-card";
+import { RichTitle } from "@/components/content/rich-title";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
 import { categories } from "@/lib/config/categories";
+import type { HeadingData } from "@/lib/content/types";
 import { getPublishedPackages } from "@/server/packages";
 
-export async function ExperienceCategories() {
+export async function ExperienceCategories({ heading }: { heading: HeadingData }) {
   const packages = await getPublishedPackages();
   return (
     <section aria-labelledby="experience-heading" className="bg-sand-100 py-20 sm:py-28">
       <div className="container-page">
         <SectionHeading
-          eyebrow="Explore by experience"
+          eyebrow={heading.eyebrow || undefined}
           title={
             <span id="experience-heading">
-              Three ways to <Accent className="text-pine-600">find your trail</Accent>
+              <RichTitle text={heading.title} accentClassName="text-pine-600" />
             </span>
           }
-          description="Whether you want to stand on a summit, drive over the world's highest passes, or simply breathe — there's a Traylborn journey for it."
+          description={heading.description || undefined}
         />
         <Stagger className="mt-12 grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-3">
           {categories.map((c, i) => {

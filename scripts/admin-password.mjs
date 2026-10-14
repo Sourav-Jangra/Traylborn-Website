@@ -9,7 +9,7 @@
 import { parseArgs } from "node:util";
 import { stdin, stdout } from "node:process";
 import { connect } from "./lib/db.mjs";
-import { hashPassword, passwordProblem } from "../src/server/auth/password.ts";
+import { hashPassword, passwordProblem } from "../src/server/auth/password-core.mjs";
 
 const USAGE = 'Usage: npm run admin:password -- --email <email> [--name "<name>"] [--password-stdin]';
 

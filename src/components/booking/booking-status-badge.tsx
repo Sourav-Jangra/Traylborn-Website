@@ -8,6 +8,13 @@ export const bookingStatusLabel: Record<string, string> = {
   completed: "Completed",
 };
 
+export const paymentStatusLabel: Record<string, string> = {
+  unpaid: "Unpaid",
+  partially_paid: "Partially paid",
+  paid: "Paid in full",
+  refunded: "Refunded",
+};
+
 const styles: Record<string, string> = {
   pending_payment: "bg-ember-500/15 text-ember-700 ring-ember-500/30",
   confirmed: "bg-moss-500/12 text-moss-700 ring-moss-500/25",

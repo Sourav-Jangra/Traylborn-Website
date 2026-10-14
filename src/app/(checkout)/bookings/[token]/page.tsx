@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { Info } from "lucide-react";
+import { CheckCircle2, Info } from "lucide-react";
 import { WhatsappIcon } from "@/components/brand/social-icons";
-import { BookingStatusBadge } from "@/components/booking/booking-status-badge";
+import { BookingStatusBadge, paymentStatusLabel } from "@/components/booking/booking-status-badge";
+import { PayButton } from "@/components/booking/pay-button";
+import { isRazorpayConfigured } from "@/server/razorpay";
 import { whatsappLink } from "@/lib/config/site";
 import { BUSINESS_TIME_ZONE, formatDateLong, formatPrice } from "@/lib/utils/format";
 import { getBookingByAccessToken } from "@/server/bookings";
@@ -26,6 +28,8 @@ export default async function GuestBookingPage({ params }: PageProps<"/bookings/
   const primary = booking.travellers[0];
   const others = booking.travellers.slice(1);
   const pending = booking.status === "pending_payment";
+  const dueNow = Math.max(0, booking.amountDueNow - booking.amountPaid);
+  const onlinePayment = pending && dueNow > 0 && isRazorpayConfigured();
 
   return (
     <div className="container-page py-10 sm:py-14">
@@ -46,9 +50,33 @@ export default async function GuestBookingPage({ params }: PageProps<"/bookings/
             <p className="flex items-center gap-2 font-semibold text-pine-800">
               <Info className="size-4 shrink-0" aria-hidden="true" /> Your booking is awaiting payment
             </p>
-            <p className="mt-1.5 text-pine-800/80">
-              Online payment isn&apos;t available yet. Our team will contact you to arrange payment
-              {booking.expiresAt ? `; your place is held until ${time.format(booking.expiresAt)} (IST)` : ""}.
+            {onlinePayment ? (
+              <>
+                <p className="mt-1.5 text-pine-800/80">
+                  Pay {booking.paymentPlan === "advance" ? "the advance" : "the full amount"} to confirm your place
+                  {booking.expiresAt ? ` before ${time.format(booking.expiresAt)} (IST)` : ""}. Payments are processed securely by Razorpay.
+                </p>
+                <div className="mt-4">
+                  <PayButton token={token} amount={dueNow} label={booking.paymentPlan === "advance" ? "Pay advance" : "Pay"} />
+                </div>
+              </>
+            ) : (
+              <p className="mt-1.5 text-pine-800/80">
+                Online payment is unavailable right now. Our team will contact you to arrange payment
+                {booking.expiresAt ? `; your place is held until ${time.format(booking.expiresAt)} (IST)` : ""}.
+              </p>
+            )}
+          </div>
+        )}
+        {booking.status === "confirmed" && (
+          <div className="rounded-2xl bg-moss-500/10 p-5 text-sm ring-1 ring-moss-500/25">
+            <p className="flex items-center gap-2 font-semibold text-moss-700">
+              <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" /> Your booking is confirmed
+            </p>
+            <p className="mt-1.5 text-ink/80">
+              {booking.balance > 0
+                ? `We've received ${formatPrice(booking.amountPaid)}. The remaining ${formatPrice(booking.balance)} is paid to our team before the trip.`
+                : `We've received the full amount of ${formatPrice(booking.amountPaid)}.`}
             </p>
           </div>
         )}
@@ -58,7 +86,10 @@ export default async function GuestBookingPage({ params }: PageProps<"/bookings/
           </div>
         )}
         {booking.status === "cancelled" && (
-          <div className="rounded-2xl bg-sand-100 p-5 text-sm ring-1 ring-black/5">This booking has been cancelled.</div>
+          <div className="rounded-2xl bg-sand-100 p-5 text-sm ring-1 ring-black/5">
+            This booking has been cancelled.
+            {booking.amountPaid > 0 && ` We've received ${formatPrice(booking.amountPaid)} for it; our team will contact you about a refund.`}
+          </div>
         )}
 
         <Section title="Your trip">
@@ -80,15 +111,19 @@ export default async function GuestBookingPage({ params }: PageProps<"/bookings/
         </Section>
 
         <Section title="Price">
-          <Row label={`${formatPrice(booking.unitPrice)} × ${booking.travellerCount}`} value={formatPrice(booking.total)} strong />
-          {booking.paymentPlan === "advance" ? (
+          {booking.discount > 0 ? (
             <>
-              <Row label="Advance to pay" value={formatPrice(booking.amountDueNow)} />
-              <Row label="Balance later" value={formatPrice(booking.balance)} />
+              <Row label={`${formatPrice(booking.unitPrice)} × ${booking.travellerCount}`} value={formatPrice(booking.subtotal)} />
+              <Row label={booking.discountLabel ?? "Discount"} value={`−${formatPrice(booking.discount)}`} />
+              <Row label="Total" value={formatPrice(booking.total)} strong />
             </>
           ) : (
-            <Row label="Payment" value="Full amount" />
+            <Row label={`${formatPrice(booking.unitPrice)} × ${booking.travellerCount}`} value={formatPrice(booking.total)} strong />
           )}
+          <Row label="Payment plan" value={booking.paymentPlan === "advance" ? `Advance of ${formatPrice(booking.amountDueNow)}` : "Full amount"} />
+          <Row label="Payment status" value={paymentStatusLabel[booking.paymentStatus] ?? booking.paymentStatus} />
+          <Row label="Paid" value={formatPrice(booking.amountPaid)} />
+          <Row label="Remaining balance" value={formatPrice(booking.balance)} />
         </Section>
 
         <a

@@ -1,12 +1,32 @@
 "use server";
 
 import { parseDetails, type DetailErrors } from "@/lib/utils/booking-details";
+import { normalizeCouponCode } from "@/lib/utils/discounts";
+import type { Discount } from "@/lib/utils/pricing";
 import { getClientInfo } from "@/server/auth/session";
 import { createBooking, isValidIdempotencyKey } from "@/server/bookings";
+import { couponProblemMessage, lookupCoupon } from "@/server/discounts";
+import { db } from "@/server/db";
+import { getPackageBySlug } from "@/server/packages";
 
 export type CreateBookingActionResult =
   | { ok: true; path: string }
-  | { ok: false; error: string; fieldErrors?: DetailErrors; reference?: string };
+  | { ok: false; error: string; fieldErrors?: DetailErrors; reference?: string; couponError?: boolean };
+
+export type CheckCouponResult = { ok: true; coupon: Discount } | { ok: false; error: string };
+
+// Public. The returned discount only drives the totals shown at checkout; createBooking
+// looks the coupon up again and recalculates everything itself.
+export async function checkCouponAction(slug: unknown, code: unknown): Promise<CheckCouponResult> {
+  if (typeof slug !== "string" || slug.length > 160) return { ok: false, error: couponProblemMessage.unknown };
+  const normalized = normalizeCouponCode(code);
+  if (!normalized) return { ok: false, error: couponProblemMessage.unknown };
+  const pkg = await getPackageBySlug(slug);
+  if (!pkg) return { ok: false, error: "This trip is no longer open for booking." };
+  const { ip } = await getClientInfo();
+  const result = await lookupCoupon(db, normalized, Number(pkg.id), ip);
+  return result.ok ? { ok: true, coupon: result.discount } : { ok: false, error: couponProblemMessage[result.problem] };
+}
 
 const MAX_AMOUNT = 1_000_000_000;
 
@@ -20,6 +40,10 @@ export async function createBookingAction(input: unknown): Promise<CreateBooking
   const optionId = r.optionId;
   const expectedTotal = amount(r.expectedTotal);
   const expectedPayNow = amount(r.expectedPayNow);
+  const couponCode = r.couponCode == null || r.couponCode === "" ? null : normalizeCouponCode(r.couponCode);
+  if (r.couponCode != null && r.couponCode !== "" && !couponCode) {
+    return { ok: false, couponError: true, error: couponProblemMessage.unknown };
+  }
   if (
     typeof r.slug !== "string" ||
     r.slug.length > 160 ||
@@ -47,6 +71,7 @@ export async function createBookingAction(input: unknown): Promise<CreateBooking
     plan: r.plan,
     expectedTotal,
     expectedPayNow,
+    couponCode,
     idempotencyKey: r.idempotencyKey,
     details: parsed.details,
     ip,
@@ -64,6 +89,8 @@ export async function createBookingAction(input: unknown): Promise<CreateBooking
       return { ok: false, error: "This trip is no longer open for booking." };
     case "date_unavailable":
       return { ok: false, error: "That departure date is no longer available. Please choose another date." };
+    case "coupon":
+      return { ok: false, couponError: true, error: `${couponProblemMessage[result.problem]} Remove it or try another code, then confirm again.` };
     case "price_changed":
       return { ok: false, error: "The price for this trip has changed. Please reload the page to see the latest price." };
     case "rate_limited":

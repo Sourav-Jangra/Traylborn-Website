@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PackageEditor, type EditablePackage } from "@/components/admin/package-editor";
 import { requireAdmin } from "@/server/auth/session";
+import { listMedia } from "@/server/media";
 import { getPackageForAdmin } from "@/server/packages";
 
 const blank: EditablePackage = {
@@ -39,7 +40,10 @@ export async function generateMetadata({ params }: PageProps<"/admin/packages/[s
 export default async function EditPackagePage({ params }: PageProps<"/admin/packages/[slug]">) {
   await requireAdmin();
   const { slug } = await params;
-  if (slug === "new") return <PackageEditor initial={blank} isNew />;
+  const media = (await listMedia())
+    .filter((m) => m.resourceType === "image")
+    .map((m) => ({ id: m.id, src: m.src, alt: m.alt, label: m.label, resourceType: m.resourceType }));
+  if (slug === "new") return <PackageEditor initial={blank} isNew media={media} />;
 
   const pkg = await getPackageForAdmin(slug);
   if (!pkg) notFound();
@@ -71,5 +75,5 @@ export default async function EditPackagePage({ params }: PageProps<"/admin/pack
     badge: pkg.badge,
   };
 
-  return <PackageEditor initial={initial} isNew={false} />;
+  return <PackageEditor initial={initial} isNew={false} media={media} />;
 }

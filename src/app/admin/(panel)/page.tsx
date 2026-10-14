@@ -14,8 +14,10 @@ const capabilities = [
   { title: "Edit trip content", description: "Itinerary, highlights, inclusions and exclusions.", Icon: FilePen },
   { title: "Set prices", description: "Price per person, with an optional struck-through original price.", Icon: Tag },
   { title: "Publish or hide", description: "Keep a trip as a draft until it's ready, then publish it.", Icon: Eye },
-  { title: "Feature on homepage", description: "Choose which trips appear in Featured journeys.", Icon: Star },
+  { title: "Feature on homepage", description: "Choose which trips appear in Featured journeys, and in what order.", Icon: Star },
+  { title: "Homepage content", description: "Hero slides, offers and section text, with a preview before showing them.", Icon: Eye },
   { title: "Departure dates", description: "Every day, specific weekdays, or fixed dates.", Icon: CalendarRange },
+  { title: "Coupons and offers", description: "Discount codes for checkout, and offers that run automatically between two dates.", Icon: Tag },
 ];
 
 export default async function AdminDashboard() {

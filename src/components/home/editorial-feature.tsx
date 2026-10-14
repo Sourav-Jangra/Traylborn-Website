@@ -1,17 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock, Mountain, TrendingUp } from "lucide-react";
-import { Accent } from "@/components/layout/section-heading";
 import { Rating } from "@/components/packages/package-meta";
+import { RichTitle } from "@/components/content/rich-title";
 import { Reveal } from "@/components/ui/motion";
-import { getPackageBySlug } from "@/server/packages";
+import type { SpotlightData } from "@/lib/content/types";
+import type { TravelPackage } from "@/lib/types";
 import { getNextDeparture } from "@/lib/utils/departures";
 import { formatDate, formatDuration, formatPrice } from "@/lib/utils/format";
 
-export async function EditorialFeature({ slug = "hampta-pass-chandratal" }: { slug?: string }) {
-  const pkg = await getPackageBySlug(slug);
-  if (!pkg) return null;
+export function EditorialFeature({ pkg, content }: { pkg: TravelPackage; content: SpotlightData }) {
   const next = getNextDeparture(pkg);
+  const [cover, inset] = pkg.images;
+  if (!cover) return null;
 
   const facts = [
     { Icon: Clock, label: "Duration", value: formatDuration(pkg.durationDays, pkg.nights) },
@@ -26,21 +27,25 @@ export async function EditorialFeature({ slug = "hampta-pass-chandratal" }: { sl
         <Reveal className="relative">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] sm:aspect-[5/5] lg:aspect-[4/5]">
             <Image
-              src={pkg.images[0].src}
-              alt={pkg.images[0].alt}
+              src={cover.src}
+              alt={cover.alt}
               fill
               sizes="(min-width: 1024px) 45vw, 100vw"
               className="object-cover"
             />
-            <span className="absolute top-5 left-5 rounded-full bg-ember-500 px-4 py-1.5 text-xs font-semibold text-ink">
-              Journey of the season
-            </span>
+            {content.badge && (
+              <span className="absolute top-5 left-5 rounded-full bg-ember-500 px-4 py-1.5 text-xs font-semibold text-ink">
+                {content.badge}
+              </span>
+            )}
           </div>
-          <div className="absolute -right-2 -bottom-8 w-[46%] overflow-hidden rounded-3xl border-[6px] border-background shadow-2xl sm:-right-6 lg:-right-10">
-            <div className="relative aspect-[4/5]">
-              <Image src={pkg.images[1].src} alt={pkg.images[1].alt} fill sizes="(min-width: 1024px) 20vw, 45vw" className="object-cover" />
+          {inset && (
+            <div className="absolute -right-2 -bottom-8 w-[46%] overflow-hidden rounded-3xl border-[6px] border-background shadow-2xl sm:-right-6 lg:-right-10">
+              <div className="relative aspect-[4/5]">
+                <Image src={inset.src} alt={inset.alt} fill sizes="(min-width: 1024px) 20vw, 45vw" className="object-cover" />
+              </div>
             </div>
-          </div>
+          )}
         </Reveal>
 
         <div className="pt-6 lg:pt-0">
@@ -48,7 +53,7 @@ export async function EditorialFeature({ slug = "hampta-pass-chandratal" }: { sl
             <span className="h-px w-6 bg-pine-600" /> {pkg.region} · {pkg.state}
           </p>
           <h2 id="editorial-heading" className="mt-3 text-[2.25rem] leading-[1.02] font-semibold sm:text-5xl lg:text-6xl">
-            Green valleys to <Accent className="text-pine-600">moon deserts</Accent> in five days.
+            <RichTitle text={content.title} accentClassName="text-pine-600" />
           </h2>
           <div className="mt-4 flex items-center gap-3">
             <span className="font-display text-lg font-semibold">{pkg.title}</span>

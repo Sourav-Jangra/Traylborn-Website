@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getLiveOffers, offersForPackage } from "@/server/discounts";
 import { getPackageBySlug } from "@/server/packages";
 import { getDepartures, MAX_PARTICIPANTS } from "@/lib/utils/departures";
 import { defaultOption } from "@/lib/utils/pricing";
@@ -16,6 +17,7 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
   const query = await searchParams;
   const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
+  const offers = offersForPackage(await getLiveOffers(), Number(pkg.id));
 
   const departures = getDepartures(pkg, 400);
   const requestedDate = typeof query.date === "string" ? query.date : undefined;
@@ -34,7 +36,7 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
         title: pkg.title,
         price: pkg.price,
         originalPrice: pkg.originalPrice,
-        pricing: { priceOptions: pkg.priceOptions, advancePayment: pkg.advancePayment },
+        pricing: { priceOptions: pkg.priceOptions, advancePayment: pkg.advancePayment, offers },
         durationDays: pkg.durationDays,
         nights: pkg.nights,
         departureLabel: pkg.departureLabel,

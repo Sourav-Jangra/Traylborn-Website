@@ -1,10 +1,4 @@
-import { HomeHero } from "@/components/hero/home-hero";
-import { TrustBar } from "@/components/home/trust-bar";
-import { FeaturedJourneys } from "@/components/home/featured-journeys";
-import { ExperienceCategories } from "@/components/home/experience-categories";
-import { WhyTraylborn } from "@/components/home/why-traylborn";
-import { EditorialFeature } from "@/components/home/editorial-feature";
-import { FinalCta } from "@/components/home/final-cta";
+import { HomeSections } from "@/components/home/home-sections";
 import { siteConfig } from "@/lib/config/site";
 
 const organizationJsonLd = {
@@ -30,13 +24,7 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <HomeHero />
-      <TrustBar />
-      <FeaturedJourneys />
-      <ExperienceCategories />
-      <EditorialFeature />
-      <WhyTraylborn />
-      <FinalCta />
+      <HomeSections />
     </>
   );
 }

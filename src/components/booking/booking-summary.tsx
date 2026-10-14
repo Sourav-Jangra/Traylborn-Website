@@ -3,7 +3,7 @@ import { formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 
 export function BookingSummary({ quote, showOption, className }: { quote: PriceQuote; showOption: boolean; className?: string }) {
-  const { option, travellers, total, plan, payNow, balance } = quote;
+  const { option, travellers, subtotal, discount, appliedDiscount, total, plan, payNow, balance } = quote;
 
   return (
     <dl className={cn("space-y-2.5 text-sm", className)}>
@@ -17,8 +17,14 @@ export function BookingSummary({ quote, showOption, className }: { quote: PriceQ
         <dt className="text-muted-foreground">
           {formatPrice(option.price)} × {travellers} {travellers === 1 ? "traveller" : "travellers"}
         </dt>
-        <dd className="font-medium text-ink">{formatPrice(total)}</dd>
+        <dd className="font-medium text-ink">{formatPrice(subtotal)}</dd>
       </div>
+      {discount > 0 && appliedDiscount && (
+        <div className="flex justify-between gap-4">
+          <dt className="text-pine-700">{appliedDiscount.label}</dt>
+          <dd className="font-medium text-pine-700">−{formatPrice(discount)}</dd>
+        </div>
+      )}
       <div className="flex items-end justify-between gap-4 border-t border-border pt-3">
         <dt className="font-semibold text-ink">Total</dt>
         <dd className="font-display text-2xl font-semibold text-ink">{formatPrice(total)}</dd>

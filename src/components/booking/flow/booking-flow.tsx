@@ -7,7 +7,7 @@ import { AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { m, EASE } from "@/components/ui/motion";
 import type { Departure } from "@/lib/utils/departures";
-import { quotePrice, type PaymentPlan } from "@/lib/utils/pricing";
+import { quotePrice, type Discount, type PaymentPlan } from "@/lib/utils/pricing";
 import { formatPrice } from "@/lib/utils/format";
 import { emptyCompanion, validateDetails, type DetailErrors } from "@/lib/utils/booking-details";
 import { createBookingAction } from "@/app/(checkout)/book/[slug]/actions";
@@ -18,6 +18,7 @@ import { Stepper } from "./stepper";
 import { OrderSummaryCard } from "./order-summary-card";
 import { TravellerStep } from "./traveller-step";
 import { ConfirmButton, ReviewStep } from "./review-step";
+import { CouponField } from "./coupon-field";
 import { emptyDetails, STEPS, type CheckoutPackage, type TravellerDetails } from "./types";
 
 interface BookingFlowProps {
@@ -45,6 +46,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
   const [participants, setParticipants] = useState(initialParticipants);
   const [optionId, setOptionId] = useState(initialOptionId);
   const [plan, setPlan] = useState<PaymentPlan>("full");
+  const [coupon, setCoupon] = useState<Discount | null>(null);
   const [details, setDetails] = useState<TravellerDetails>(emptyDetails);
   const [errors, setErrors] = useState<DetailErrors>({});
   const [dateError, setDateError] = useState(false);
@@ -53,12 +55,12 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
 
   const options = pkg.pricing.priceOptions;
   const quote = useMemo(() => {
-    const full = quotePrice(pkg.pricing, { optionId, travellers: participants });
-    // Switching option or travellers can make the advance unavailable; fall back to full.
+    const full = quotePrice(pkg.pricing, { optionId, travellers: participants, coupon });
+    // Switching option, travellers or coupon can make the advance unavailable; fall back to full.
     return plan === "advance" && full.advance !== null
-      ? quotePrice(pkg.pricing, { optionId, travellers: participants, plan })
+      ? quotePrice(pkg.pricing, { optionId, travellers: participants, plan, coupon })
       : full;
-  }, [pkg.pricing, optionId, participants, plan]);
+  }, [pkg.pricing, optionId, participants, plan, coupon]);
 
   // Companion entries beyond the current traveller count are kept in state (in case the
   // count goes back up) but never validated or submitted.
@@ -103,6 +105,8 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
         plan: quote.plan,
         expectedTotal: quote.total,
         expectedPayNow: quote.payNow,
+        // Only the code is sent; the server checks it again and works out the discount itself.
+        couponCode: quote.appliedDiscount?.source === "coupon" ? quote.appliedDiscount.code : null,
         idempotencyKey,
         details: travellers,
       });
@@ -115,6 +119,7 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
         setStep(1);
         return;
       }
+      if (result.couponError) setCoupon(null);
       setSubmitError(result.error);
     });
   };
@@ -207,6 +212,17 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
                     onConfirm={confirm}
                     pending={pending}
                     error={submitError}
+                    couponField={
+                      <CouponField
+                        slug={pkg.slug}
+                        coupon={coupon}
+                        quote={quote}
+                        onChange={(c) => {
+                          setCoupon(c);
+                          setSubmitError(null);
+                        }}
+                      />
+                    }
                   />
                 )}
               </m.div>
@@ -238,7 +254,11 @@ export function BookingFlow({ pkg, departures, initialDate, initialParticipants,
         <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">
-              {quote.plan === "advance" ? `Advance now · total ${formatPrice(quote.total)}` : `${participants} × ${formatPrice(quote.option.price)}`}
+              {quote.plan === "advance"
+                ? `Advance now · total ${formatPrice(quote.total)}`
+                : quote.discount > 0
+                  ? `${formatPrice(quote.subtotal)} − ${formatPrice(quote.discount)} off`
+                  : `${participants} × ${formatPrice(quote.option.price)}`}
             </p>
             <p className="font-display text-xl font-semibold text-ink">{formatPrice(quote.payNow)}</p>
           </div>

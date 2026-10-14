@@ -8,6 +8,7 @@ import { addDays, parseISODate, toISODate, todayISO } from "@/lib/utils/format";
 import { PricingError, quotePrice, type PaymentPlan } from "@/lib/utils/pricing";
 import { recordAudit, type Actor } from "./audit";
 import { db, parseJson, withTransaction } from "./db";
+import { getLiveOffers, lookupCoupon, offersForPackage, type CouponProblem } from "./discounts";
 
 export const BOOKING_STATUSES = ["pending_payment", "confirmed", "cancelled", "expired", "completed"] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
@@ -60,6 +61,8 @@ export interface BookingRequest {
   /** The totals the customer was shown; a mismatch means the price changed. */
   expectedTotal: number;
   expectedPayNow: number;
+  /** Normalized coupon code the customer entered, or null. */
+  couponCode: string | null;
   idempotencyKey: string;
   details: CleanDetails;
   ip: string | null;
@@ -68,6 +71,7 @@ export interface BookingRequest {
 export type CreateBookingResult =
   | { ok: true; reference: string; accessToken: string }
   | { ok: false; reason: "unavailable" | "date_unavailable" | "invalid" | "price_changed" | "rate_limited" }
+  | { ok: false; reason: "coupon"; problem: CouponProblem }
   | { ok: false; reason: "duplicate"; reference: string };
 
 interface LockedPackage extends RowDataPacket {
@@ -137,9 +141,17 @@ export async function createBooking(req: BookingRequest): Promise<CreateBookingR
         type: pkg.advance_type,
         value: pkg.advance_value,
       };
+      // Offers and the coupon are read here, under share locks, never taken from the request.
+      const offers = offersForPackage(await getLiveOffers(conn, { lock: true }), Number(pkg.id));
+      let coupon = null;
+      if (req.couponCode) {
+        const found = await lookupCoupon(conn, req.couponCode, pkg.id, req.ip, { lock: true });
+        if (!found.ok) return { ok: false, reason: "coupon", problem: found.problem };
+        coupon = found.discount;
+      }
       let quote;
       try {
-        quote = quotePrice({ priceOptions, advancePayment }, { optionId: req.optionId, travellers: travellerCount, plan: req.plan });
+        quote = quotePrice({ priceOptions, advancePayment, offers }, { optionId: req.optionId, travellers: travellerCount, plan: req.plan, coupon });
       } catch (e) {
         if (e instanceof PricingError) return { ok: false, reason: "price_changed" };
         throw e;
@@ -148,6 +160,7 @@ export async function createBooking(req: BookingRequest): Promise<CreateBookingR
 
       const accessToken = randomBytes(32).toString("base64url");
       const offersAdvance = quote.advance !== null;
+      const applied = quote.appliedDiscount;
       let bookingId = 0;
       let reference = "";
       for (let attempt = 0; !bookingId; attempt++) {
@@ -157,10 +170,11 @@ export async function createBooking(req: BookingRequest): Promise<CreateBookingR
             `INSERT INTO bookings (
                reference, access_token_hash, idempotency_key, source, package_id, price_option_id,
                package_title, option_label, departure_date, end_date, traveller_count,
-               unit_price_paise, subtotal_paise, discount_paise, total_paise,
+               unit_price_paise, subtotal_paise, discount_paise,
+               discount_source, discount_label, discount_type, discount_value, coupon_id, coupon_code, offer_id, total_paise,
                payment_plan, advance_type, advance_value, amount_due_now_paise,
                status, payment_status, expires_at, customer_notes, created_ip, created_at, updated_at
-             ) VALUES (?, ?, ?, 'website', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?,
+             ) VALUES (?, ?, ?, 'website', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                'pending_payment', 'unpaid', UTC_TIMESTAMP() + INTERVAL ${HOLD_MINUTES} MINUTE, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
             [
               reference,
@@ -174,7 +188,15 @@ export async function createBooking(req: BookingRequest): Promise<CreateBookingR
               addDays(req.departureDate, pkg.duration_days - 1),
               travellerCount,
               paise(quote.option.price),
-              paise(quote.total),
+              paise(quote.subtotal),
+              paise(quote.discount),
+              applied?.source ?? null,
+              applied?.label ?? null,
+              applied?.type ?? null,
+              applied?.value ?? null,
+              applied?.source === "coupon" ? applied.id : null,
+              applied?.source === "coupon" ? applied.code : null,
+              applied?.source === "offer" ? applied.id : null,
               paise(quote.total),
               quote.plan,
               offersAdvance ? advancePayment.type : null,
@@ -215,6 +237,9 @@ export async function createBooking(req: BookingRequest): Promise<CreateBookingR
             departureDate: req.departureDate,
             travellers: travellerCount,
             plan: quote.plan,
+            subtotal: quote.subtotal,
+            discount: quote.discount,
+            ...(applied && { discountSource: applied.source, discountLabel: applied.label, couponCode: applied.code, offerId: applied.source === "offer" ? applied.id : null }),
             total: quote.total,
             payNow: quote.payNow,
             status: "pending_payment",
@@ -247,6 +272,8 @@ export interface BookingTraveller {
 
 /** Amounts are in rupees. */
 export interface Booking {
+  /** Internal id; server-side use only. */
+  id: number;
   reference: string;
   packageSlug: string | null;
   packageTitle: string;
@@ -255,9 +282,19 @@ export interface Booking {
   endDate: string;
   travellerCount: number;
   unitPrice: number;
+  /** unitPrice × travellers, before any discount */
+  subtotal: number;
+  discount: number;
+  /** What the discount was, as copied when the booking was made; null without one. */
+  discountLabel: string | null;
+  couponCode: string | null;
   total: number;
   paymentPlan: PaymentPlan;
+  /** Advance or full amount required to confirm the booking. */
   amountDueNow: number;
+  /** Captured payments minus refunds. */
+  amountPaid: number;
+  /** total − amountPaid */
   balance: number;
   status: BookingStatus;
   paymentStatus: PaymentStatus;
@@ -271,7 +308,7 @@ export interface Booking {
 }
 
 const BOOKING_COLUMNS = `b.id, b.reference, p.slug AS package_slug, b.package_title, b.option_label, b.departure_date, b.end_date,
-  b.traveller_count, b.unit_price_paise, b.total_paise, b.payment_plan, b.amount_due_now_paise,
+  b.traveller_count, b.unit_price_paise, b.subtotal_paise, b.discount_paise, b.discount_label, b.coupon_code, b.total_paise, b.payment_plan, b.amount_due_now_paise, b.amount_paid_paise,
   ${EFFECTIVE_STATUS} AS effective_status, b.payment_status, b.expires_at, b.customer_notes, b.admin_notes,
   b.cancellation_reason, b.created_at, b.cancelled_at`;
 
@@ -288,7 +325,9 @@ async function loadBooking(where: string, value: string): Promise<Booking | null
   );
   const total = Number(b.total_paise) / 100;
   const dueNow = Number(b.amount_due_now_paise) / 100;
+  const paid = Number(b.amount_paid_paise) / 100;
   return {
+    id: b.id,
     reference: b.reference,
     packageSlug: b.package_slug ?? null,
     packageTitle: b.package_title,
@@ -297,10 +336,15 @@ async function loadBooking(where: string, value: string): Promise<Booking | null
     endDate: b.end_date,
     travellerCount: b.traveller_count,
     unitPrice: Number(b.unit_price_paise) / 100,
+    subtotal: Number(b.subtotal_paise) / 100,
+    discount: Number(b.discount_paise) / 100,
+    discountLabel: b.discount_label ?? null,
+    couponCode: b.coupon_code ?? null,
     total,
     paymentPlan: b.payment_plan,
     amountDueNow: dueNow,
-    balance: total - dueNow,
+    amountPaid: paid,
+    balance: total - paid,
     status: b.effective_status,
     paymentStatus: b.payment_status,
     expiresAt: b.expires_at,
@@ -327,6 +371,12 @@ async function loadBooking(where: string, value: string): Promise<Booking | null
 export async function getBookingByAccessToken(token: string) {
   if (!ACCESS_TOKEN.test(token)) return null;
   return loadBooking("b.access_token_hash", hashToken(token));
+}
+
+export async function getBookingIdByAccessToken(token: unknown) {
+  if (typeof token !== "string" || !ACCESS_TOKEN.test(token)) return null;
+  const [rows] = await db.execute<RowDataPacket[]>("SELECT id FROM bookings WHERE access_token_hash = ?", [hashToken(token)]);
+  return (rows[0]?.id as number | undefined) ?? null;
 }
 
 /** Admin only. */

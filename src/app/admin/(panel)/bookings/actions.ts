@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminActor } from "@/server/auth/session";
-import { cancelBooking, isValidReference, setBookingAdminNotes, type BookingUpdateResult } from "@/server/bookings";
+import { cancelBooking, getBookingByReference, isValidReference, setBookingAdminNotes, type BookingUpdateResult } from "@/server/bookings";
+import { reconcileBooking } from "@/server/payments";
+import { RazorpayApiError, RazorpayNotConfigured } from "@/server/razorpay";
 
 const MAX_REASON = 500;
 const MAX_NOTES = 5000;
@@ -18,6 +20,22 @@ export async function cancelBookingAction(reference: unknown, reason: unknown): 
   const result = await cancelBooking(reference, r, actor);
   if (result.ok) revalidatePath("/admin/bookings", "layout");
   return result;
+}
+
+/** Asks Razorpay about this booking's unsettled orders and records any successful payment. */
+export async function reconcileBookingPaymentsAction(reference: unknown): Promise<BookingUpdateResult & { recorded?: number }> {
+  const actor = await requireAdminActor();
+  if (!isValidReference(reference)) return { ok: false, error: "Booking not found" };
+  const booking = await getBookingByReference(reference);
+  if (!booking) return { ok: false, error: "Booking not found" };
+  try {
+    const outcomes = await reconcileBooking(booking.id, actor.ip);
+    revalidatePath("/admin/bookings", "layout");
+    return { ok: true, recorded: outcomes.filter((o) => o === "recorded").length };
+  } catch (e) {
+    if (e instanceof RazorpayNotConfigured || e instanceof RazorpayApiError) return { ok: false, error: `Razorpay: ${e.message}` };
+    throw e;
+  }
 }
 
 export async function saveBookingNotesAction(reference: unknown, notes: unknown): Promise<BookingUpdateResult> {

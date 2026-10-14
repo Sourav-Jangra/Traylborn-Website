@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { AdminCard, AdminHeader, AdminTable, adminButton } from "@/components/admin/admin-ui";
-import { BookingStatusBadge, bookingStatusLabel } from "@/components/booking/booking-status-badge";
+import { BookingStatusBadge, bookingStatusLabel, paymentStatusLabel } from "@/components/booking/booking-status-badge";
 import { BUSINESS_TIME_ZONE, formatDate, formatPrice } from "@/lib/utils/format";
 import { requireAdmin } from "@/server/auth/session";
 import { BOOKING_LIST_LIMIT, BOOKING_STATUSES, listBookings, type BookingStatus } from "@/server/bookings";
@@ -87,7 +87,10 @@ export default async function AdminBookingsPage({ searchParams }: PageProps<"/ad
                   </td>
                   <td>{b.travellerCount}</td>
                   <td className="font-medium">{formatPrice(b.total)}</td>
-                  <td><BookingStatusBadge status={b.status} /></td>
+                  <td>
+                    <BookingStatusBadge status={b.status} />
+                    <p className="mt-1 text-xs text-muted-foreground">{paymentStatusLabel[b.paymentStatus] ?? b.paymentStatus}</p>
+                  </td>
                   <td className="text-xs text-muted-foreground">{created.format(b.createdAt)}</td>
                 </tr>
               ))}

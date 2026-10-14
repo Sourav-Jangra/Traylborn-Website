@@ -4,7 +4,7 @@ import { HeartHandshake, ShieldCheck, Users } from "lucide-react";
 import { PageHero } from "@/components/hero/page-hero";
 import { SectionHeading, Accent } from "@/components/layout/section-heading";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/motion";
-import { FinalCta } from "@/components/home/final-cta";
+import { SharedFinalCta } from "@/components/home/final-cta";
 
 export const metadata: Metadata = {
   title: "About us",
@@ -75,7 +75,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <FinalCta />
+      <SharedFinalCta />
     </>
   );
 }

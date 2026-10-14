@@ -167,8 +167,52 @@ export async function getPackagesByCategory(category: Category) {
   return (await getPublishedPackages()).filter((p) => p.category === category);
 }
 
+/** Featured package ids (any status) in homepage order. */
+async function featuredOrder() {
+  const [rows] = await db.query<RowDataPacket[]>("SELECT id FROM packages WHERE featured = 1 ORDER BY featured_sort, title");
+  return rows.map((r) => String(r.id));
+}
+
+/** Published featured packages in the order chosen in the homepage admin. */
 export async function getFeaturedPackages() {
-  return (await getPublishedPackages()).filter((p) => p.featured);
+  const published = new Map((await getPublishedPackages()).map((p) => [p.id, p]));
+  return (await featuredOrder()).flatMap((id) => published.get(id) ?? []);
+}
+
+/** Every featured package, published or not, in homepage order — admin only. */
+export async function getFeaturedPackagesForAdmin() {
+  const all = new Map((await getAllPackages()).map((p) => [p.id, p]));
+  return (await featuredOrder()).flatMap((id) => all.get(id) ?? []);
+}
+
+/** A package that becomes featured joins the end of the homepage order. */
+async function moveToEndOfFeatured(conn: PoolConnection, packageId: number) {
+  const [rows] = await conn.query<RowDataPacket[]>(
+    "SELECT COALESCE(MAX(featured_sort), -1) + 1 AS next FROM packages WHERE featured = 1 AND id <> ?",
+    [packageId],
+  );
+  await conn.execute("UPDATE packages SET featured_sort = ? WHERE id = ?", [Math.min(Number(rows[0].next), 65535), packageId]);
+}
+
+/** `slugs` must list every featured package exactly once, in the new homepage order. */
+export async function reorderFeaturedPackages(slugs: string[], actor: Actor): Promise<boolean> {
+  return withTransaction(async (conn) => {
+    const [rows] = await conn.query<RowDataPacket[]>(
+      "SELECT id, slug FROM packages WHERE featured = 1 ORDER BY featured_sort, title FOR UPDATE",
+    );
+    const current = rows.map((r) => r.slug as string);
+    if (slugs.length !== current.length || new Set(slugs).size !== slugs.length || !slugs.every((s) => current.includes(s))) return false;
+    if (slugs.every((s, i) => s === current[i])) return true;
+    for (const [i, slug] of slugs.entries()) {
+      await conn.execute("UPDATE packages SET featured_sort = ? WHERE slug = ?", [i, slug]);
+    }
+    await recordAudit(
+      actor,
+      { action: "package.featured_order", entityType: "package", entityId: null, before: { order: current }, after: { order: slugs } },
+      conn,
+    );
+    return true;
+  });
 }
 
 export async function getRelatedPackages(pkg: TravelPackage, limit = 3) {
@@ -323,6 +367,7 @@ export async function createPackage(slug: string, u: PackageUpdate, actor: Actor
           u.badge,
         ],
       );
+      if (u.featured) await moveToEndOfFeatured(conn, result.insertId);
       const priceOptions = await writePriceOptions(conn, result.insertId, u.priceOptions, []);
       await recordAudit(
         actor,
@@ -365,6 +410,7 @@ export async function setPackageFeatured(slug: string, featured: boolean, actor:
     if (!row) return false;
     if (Boolean(row.featured) === featured) return true;
     await conn.execute("UPDATE packages SET featured = ? WHERE id = ?", [featured ? 1 : 0, row.id]);
+    if (featured) await moveToEndOfFeatured(conn, row.id);
     await recordAudit(
       actor,
       {
@@ -425,6 +471,7 @@ export async function updatePackage(slug: string, u: PackageUpdate, actor: Actor
         row.id,
       ],
     );
+    if (changes.after.featured === true) await moveToEndOfFeatured(conn, row.id);
     const priceOptions = "priceOptions" in changes.after
       ? await writePriceOptions(conn, row.id, u.priceOptions, optionRows)
       : optionRows.map(toPriceOption);

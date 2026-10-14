@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AdminCard, AdminHeader, AdminTable } from "@/components/admin/admin-ui";
-import { BookingNotesForm, CancelBookingForm } from "@/components/admin/booking-controls";
-import { BookingStatusBadge } from "@/components/booking/booking-status-badge";
+import { BookingNotesForm, CancelBookingForm, ReconcilePaymentsButton } from "@/components/admin/booking-controls";
+import { BookingStatusBadge, paymentStatusLabel } from "@/components/booking/booking-status-badge";
+import { listPayments } from "@/server/payments";
 import { BUSINESS_TIME_ZONE, formatDateLong, formatPrice } from "@/lib/utils/format";
 import { requireAdmin } from "@/server/auth/session";
 import { getBookingByReference } from "@/server/bookings";
@@ -11,14 +12,13 @@ import { getBookingByReference } from "@/server/bookings";
 export const metadata = { title: "Booking" };
 
 const dateTime = new Intl.DateTimeFormat("en-IN", { timeZone: BUSINESS_TIME_ZONE, dateStyle: "medium", timeStyle: "short" });
-const paymentLabel: Record<string, string> = { unpaid: "Unpaid", partially_paid: "Partially paid", paid: "Paid", refunded: "Refunded" };
-
 export default async function AdminBookingPage({ params }: PageProps<"/admin/bookings/[reference]">) {
   await requireAdmin();
   const { reference } = await params;
   const booking = await getBookingByReference(reference);
   if (!booking) notFound();
 
+  const payments = await listPayments(booking.id);
   const primary = booking.travellers[0];
   const cancellable = ["pending_payment", "expired", "confirmed"].includes(booking.status);
 
@@ -89,15 +89,70 @@ export default async function AdminBookingPage({ params }: PageProps<"/admin/boo
         <div className="space-y-6">
           <AdminCard title="Payment">
             <dl className="space-y-2.5 p-5 text-sm">
-              <Row label={`${formatPrice(booking.unitPrice)} × ${booking.travellerCount}`} value={formatPrice(booking.total)} />
+              {booking.discount > 0 ? (
+                <>
+                  <Row label={`${formatPrice(booking.unitPrice)} × ${booking.travellerCount}`} value={formatPrice(booking.subtotal)} />
+                  <Row label={booking.discountLabel ?? "Discount"} value={`−${formatPrice(booking.discount)}`} />
+                  <Row label="Total" value={formatPrice(booking.total)} />
+                </>
+              ) : (
+                <Row label={`${formatPrice(booking.unitPrice)} × ${booking.travellerCount}`} value={formatPrice(booking.total)} />
+              )}
               <Row label="Plan" value={booking.paymentPlan === "advance" ? "Advance" : "Full payment"} />
-              <Row label="Due now" value={formatPrice(booking.amountDueNow)} />
-              {booking.balance > 0 && <Row label="Balance later" value={formatPrice(booking.balance)} />}
-              <Row label="Payment status" value={paymentLabel[booking.paymentStatus] ?? booking.paymentStatus} />
+              <Row label="Required to confirm" value={formatPrice(booking.amountDueNow)} />
+              <Row label="Paid" value={formatPrice(booking.amountPaid)} />
+              <Row label="Balance due" value={formatPrice(booking.balance)} />
+              <Row label="Payment status" value={paymentStatusLabel[booking.paymentStatus] ?? booking.paymentStatus} />
               {booking.status === "pending_payment" && booking.expiresAt && (
                 <Row label="Hold expires" value={dateTime.format(booking.expiresAt)} />
               )}
             </dl>
+            {(booking.status === "cancelled" || booking.status === "expired") && booking.amountPaid > 0 && (
+              <p className="mx-5 mb-5 rounded-xl bg-destructive/8 px-3.5 py-2.5 text-sm font-medium text-destructive">
+                {formatPrice(booking.amountPaid)} was received for a {booking.status} booking. Refund it from the Razorpay dashboard.
+              </p>
+            )}
+            {booking.amountPaid > booking.total && (
+              <p className="mx-5 mb-5 rounded-xl bg-destructive/8 px-3.5 py-2.5 text-sm font-medium text-destructive">
+                Overpaid by {formatPrice(booking.amountPaid - booking.total)}.
+              </p>
+            )}
+          </AdminCard>
+
+          <AdminCard title="Payment history">
+            {payments.length === 0 ? (
+              <p className="p-5 text-sm text-muted-foreground">No payment attempts yet.</p>
+            ) : (
+              <ul className="divide-y divide-border text-sm">
+                {payments.map((p) => (
+                  <li key={p.id} className="space-y-1 px-5 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-ink">{formatPrice(p.amount)}</span>
+                      <span className={p.status === "captured" ? "text-xs font-semibold text-moss-700" : p.status === "failed" ? "text-xs font-semibold text-destructive" : "text-xs font-semibold text-muted-foreground"}>
+                        {p.status === "captured" ? "Received" : p.status === "failed" ? "Failed attempt" : "Awaiting payment"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {p.method === "razorpay" ? "Razorpay" : p.method}
+                      {p.providerMethod ? ` · ${p.providerMethod}` : ""}
+                      {p.capturedVia ? ` · confirmed by ${p.capturedVia === "checkout" ? "checkout (signature verified)" : "webhook / Razorpay API"}` : ""}
+                    </p>
+                    {p.razorpayOrderId && <p className="font-mono text-xs break-all text-muted-foreground">{p.razorpayOrderId}</p>}
+                    {p.razorpayPaymentId && <p className="font-mono text-xs break-all text-muted-foreground">{p.razorpayPaymentId}</p>}
+                    <p className="text-xs text-muted-foreground">
+                      {p.receivedAt ? `Received ${dateTime.format(p.receivedAt)}` : `Started ${dateTime.format(p.createdAt)}`}
+                    </p>
+                    {p.afterExpiry && <p className="text-xs font-semibold text-ember-700">Paid after the 30-minute hold expired</p>}
+                    {p.status === "failed" && p.errorDescription && <p className="text-xs text-destructive">{p.errorDescription}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {payments.some((p) => p.method === "razorpay" && p.status !== "captured") && (
+              <div className="border-t border-border p-5">
+                <ReconcilePaymentsButton reference={booking.reference} />
+              </div>
+            )}
           </AdminCard>
 
           {booking.status === "cancelled" && (

@@ -90,8 +90,18 @@ export function BookingPanel({ onBook, footerClassName = "bg-white", showHeader 
             </p>
             <p className="text-sm font-semibold text-ink">Total</p>
           </div>
-          <p className="font-display text-2xl font-semibold text-ink">{formatPrice(quote.total)}</p>
+          <p className="text-right font-display text-2xl font-semibold text-ink">
+            {quote.discount > 0 && (
+              <span className="mr-2 font-sans text-sm font-normal text-muted-foreground line-through">{formatPrice(quote.subtotal)}</span>
+            )}
+            {formatPrice(quote.total)}
+          </p>
         </div>
+        {quote.discount > 0 && quote.appliedDiscount && (
+          <p className="text-xs font-medium text-pine-700">
+            {quote.appliedDiscount.label}: you save {formatPrice(quote.discount)}
+          </p>
+        )}
         {quote.advance !== null && (
           <p className="text-xs text-muted-foreground">
             Or pay an advance of <span className="font-semibold text-ink">{formatPrice(quote.advance)}</span> now and the rest later.

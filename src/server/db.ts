@@ -12,6 +12,7 @@ function createPool() {
     user: config.DATABASE_USER,
     password: config.DATABASE_PASSWORD,
     database: config.DATABASE_NAME,
+    ssl: config.DATABASE_SSL,
     connectionLimit: 10,
     charset: "utf8mb4",
     // DATETIME/TIMESTAMP values are UTC; DATE values stay "YYYY-MM-DD" strings so

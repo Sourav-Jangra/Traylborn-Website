@@ -1,4 +1,5 @@
 import "server-only";
+import { databaseSsl } from "./db-ssl-core.mjs";
 
 const REQUIRED = ["DATABASE_HOST", "DATABASE_USER", "DATABASE_PASSWORD", "DATABASE_NAME"] as const;
 
@@ -14,6 +15,7 @@ function readEnv() {
   return {
     ...(Object.fromEntries(REQUIRED.map((name) => [name, process.env[name]!])) as Record<RequiredVar, string>),
     DATABASE_PORT: port,
+    DATABASE_SSL: databaseSsl(process.env),
   };
 }
 

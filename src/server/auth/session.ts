@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
+import { isIP } from "node:net";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -29,10 +30,35 @@ export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+/** How many reverse proxies in front of the app append the caller's address to X-Forwarded-For. */
+function trustedProxyCount() {
+  const raw = process.env.TRUSTED_PROXY_COUNT;
+  if (!raw) return 1;
+  const count = Number(raw);
+  if (!Number.isInteger(count) || count < 0 || count > 10) throw new Error("TRUSTED_PROXY_COUNT must be a whole number from 0 to 10.");
+  return count;
+}
+
+const LOOPBACK = /^(127\.|::1$)/;
+
+/**
+ * The visitor's address as recorded by the outermost trusted proxy, or null when it can't
+ * be known. Entries to the left of it come from the client and can be forged. A loopback
+ * address means no proxy forwarded the visitor, and must not put every visitor into one
+ * rate-limit bucket.
+ */
+function clientIp(forwardedFor: string | null) {
+  const hops = trustedProxyCount();
+  if (hops === 0 || !forwardedFor) return null;
+  const chain = forwardedFor.split(",").map((entry) => entry.trim());
+  const ip = chain[chain.length - hops]?.replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, "");
+  if (!ip || !isIP(ip) || LOOPBACK.test(ip)) return null;
+  return ip;
+}
+
 export async function getClientInfo() {
   const h = await headers();
-  const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = (forwarded || h.get("x-real-ip")?.trim() || "").slice(0, 64) || null;
+  const ip = clientIp(h.get("x-forwarded-for"));
   const userAgent = (h.get("user-agent") ?? "").slice(0, 255) || null;
   return { ip, userAgent };
 }
